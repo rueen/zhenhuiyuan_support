@@ -1,0 +1,73 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #f0f2f5;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+#app {
+  min-height: 100vh;
+}
+
+// 管理端侧边栏
+.admin-sider {
+  &.ant-layout-sider-dark {
+    background: #0d1b2a !important;
+  }
+  .ant-layout-sider-children {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.admin-menu {
+  &.ant-menu-dark,
+  &.ant-menu-dark .ant-menu-sub {
+    background: #0d1b2a !important;
+  }
+  &.ant-menu-dark .ant-menu-item-selected {
+    background-color: #1677ff !important;
+  }
+  &.ant-menu-dark .ant-menu-submenu-title:hover,
+  &.ant-menu-dark .ant-menu-item:not(.ant-menu-item-selected):hover {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+  }
+  &.ant-menu-dark .ant-menu-sub.ant-menu-inline {
+    background: #0a1522 !important;
+  }
+  &.ant-menu-dark .ant-menu-sub .ant-menu-item {
+    padding-left: 48px !important;
+  }
+}
+
+// 内容区表格头
+.page-card .ant-table-thead > tr > th {
+  background: #fafafa !important;
+  font-weight: 600;
+}
+
+// 筛选栏统一样式
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+// 操作按钮行
+.action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
