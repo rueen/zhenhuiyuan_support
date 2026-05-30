@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons-vue'
 import { getShippingTemplate, createShippingTemplate, updateShippingTemplate } from '@/api/shipping'
+import ProvinceSelector from '@/components/ProvinceSelector.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,6 +14,7 @@ const submitLoading = ref(false)
 
 const form = reactive({
   name: '',
+  is_default: 0,
   rules: [],
 })
 
@@ -31,12 +33,24 @@ function removeRule(index) {
   form.rules.splice(index, 1)
 }
 
+/**
+ * 获取除当前规则外，其他区域规则已选中的省份编码（用于禁止重复勾选）
+ * @param {number} currentIndex - 当前规则的索引
+ * @returns {string[]}
+ */
+function getOccupiedCodes(currentIndex) {
+  return form.rules
+    .filter((r, i) => i !== currentIndex && !r.is_default_group)
+    .flatMap(r => r.region_codes)
+}
+
 async function fetchTemplate() {
   if (!isEdit.value) { addRule(); return }
   pageLoading.value = true
   try {
     const data = await getShippingTemplate(route.params.id)
     form.name = data.name
+    form.is_default = data.is_default ?? 0
     form.rules = data.rules || []
     if (!form.rules.length) addRule()
   } finally { pageLoading.value = false }
@@ -49,7 +63,7 @@ async function submit() {
   if (!form.rules.length) return message.warning('请至少添加一条计费规则')
   submitLoading.value = true
   try {
-    const payload = { name: form.name, rules: form.rules }
+    const payload = { name: form.name, is_default: form.is_default, rules: form.rules }
     if (isEdit.value) {
       await updateShippingTemplate(route.params.id, payload)
       message.success('修改成功')
@@ -69,6 +83,19 @@ async function submit() {
       <a-form layout="vertical">
         <a-form-item label="模板名称" required>
           <a-input v-model:value="form.name" placeholder="请输入模板名称" style="max-width:400px" />
+        </a-form-item>
+
+        <a-form-item label="是否默认">
+          <a-switch
+            v-model:checked="form.is_default"
+            :checked-value="1"
+            :un-checked-value="0"
+            checked-children="默认"
+            un-checked-children="非默认"
+          />
+          <span style="margin-left:10px;color:rgba(0,0,0,.45);font-size:13px">
+            设为默认后，下单时将优先使用此模板
+          </span>
         </a-form-item>
 
         <a-form-item label="计费规则">
@@ -100,13 +127,10 @@ async function submit() {
                 </a-form-item>
               </a-col>
             </a-row>
-            <a-form-item v-if="!rule.is_default_group" label="适用省份编码（多个逗号分隔）">
-              <a-select
-                v-model:value="rule.region_codes"
-                mode="tags"
-                placeholder="输入省编码后回车，如 110000"
-                style="width:100%"
-                :token-separators="[',']"
+            <a-form-item v-if="!rule.is_default_group" label="适用省份">
+              <ProvinceSelector
+                v-model="rule.region_codes"
+                :disabled-codes="getOccupiedCodes(index)"
               />
             </a-form-item>
           </div>

@@ -20,7 +20,6 @@ const filters = reactive({ keyword: '', levelId: undefined, status: undefined })
 const levelOptions = ref([])
 
 const columns = [
-  // { title: 'ID', dataIndex: 'id', width: 80 },
   { title: '昵称', dataIndex: 'nickname' },
   { title: '手机号', dataIndex: 'phone' },
   { title: '等级', dataIndex: 'level_name' },
