@@ -14,13 +14,12 @@ const filters = reactive({ keyword: '' })
 const roleOptions = ref([])
 
 const columns = [
-  { title: 'ID', dataIndex: 'id', width: 80 },
   { title: '用户名', dataIndex: 'username' },
   { title: '真实姓名', dataIndex: 'real_name' },
   { title: '角色', dataIndex: 'role_name', width: 130 },
   { title: '状态', dataIndex: 'status', width: 90 },
-  { title: '创建时间', dataIndex: 'created_at', width: 160 },
-  { title: '操作', key: 'action', width: 220, fixed: 'right' },
+  { title: '创建时间', dataIndex: 'created_at', width: 220 },
+  { title: '操作', key: 'action', width: 250, fixed: 'right' },
 ]
 
 async function fetchList() {
