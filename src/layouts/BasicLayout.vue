@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
@@ -18,6 +18,54 @@ const auth = useAuthStore()
 
 const selectedKeys = ref([])
 const openKeys = ref([])
+
+/**
+ * 菜单配置：顶层项含 perm 时按模块权限显隐；含 children 时任一子项有权限即显示父级
+ * perm 为模块前缀（对应权限码 `前缀:动作`），无 perm 表示所有登录用户可见（如工作台）
+ */
+const menuConfig = [
+  { key: '/dashboard', title: '工作台', icon: DashboardOutlined },
+  { key: '/members', title: '会员管理', icon: TeamOutlined, perm: 'member' },
+  { key: '/levels', title: '会员等级', icon: TrophyOutlined, perm: 'level' },
+  {
+    key: 'products', title: '商品管理', icon: ShoppingOutlined,
+    children: [
+      { key: '/categories', title: '商品分类', perm: 'category' },
+      { key: '/products', title: '商品列表', perm: 'product' },
+    ],
+  },
+  { key: '/shipping', title: '运费模板', icon: CarOutlined, perm: 'shipping' },
+  { key: '/orders', title: '订单管理', icon: FileTextOutlined, perm: 'order' },
+  { key: '/withdrawals', title: '提现管理', icon: WalletOutlined, perm: 'withdrawal' },
+  { key: '/dividends', title: '业绩分红', icon: BarChartOutlined, perm: 'dividend' },
+  {
+    key: 'system', title: '系统管理', icon: SettingOutlined,
+    children: [
+      { key: '/system/roles', title: '角色管理', perm: 'role' },
+      { key: '/system/admins', title: '管理员', perm: 'admin' },
+      { key: '/system/logs', title: '操作日志', perm: 'log' },
+      { key: '/system/config', title: '系统配置', perm: 'config' },
+    ],
+  },
+]
+
+/** 根据当前用户权限过滤出可见菜单 */
+const visibleMenu = computed(() => {
+  return menuConfig
+    .map(item => {
+      if (item.children) {
+        const children = item.children.filter(c => !c.perm || auth.hasModule(c.perm))
+        return children.length ? { ...item, children } : null
+      }
+      return !item.perm || auth.hasModule(item.perm) ? item : null
+    })
+    .filter(Boolean)
+})
+
+// 进入后台后刷新一次权限，确保与服务端一致（失败不阻塞，沿用本地缓存）
+onMounted(() => {
+  auth.fetchProfile().catch(() => {})
+})
 
 // 根据当前路径自动选中菜单项和展开子菜单
 watch(() => route.path, (path) => {
@@ -96,48 +144,19 @@ function onUserMenu({ key }) {
         :inline-indent="16"
         @click="onMenuClick"
       >
-        <a-menu-item key="/dashboard">
-          <template #icon><DashboardOutlined /></template>
-          工作台
-        </a-menu-item>
-        <a-menu-item key="/members">
-          <template #icon><TeamOutlined /></template>
-          会员管理
-        </a-menu-item>
-        <a-menu-item key="/levels">
-          <template #icon><TrophyOutlined /></template>
-          会员等级
-        </a-menu-item>
-        <a-sub-menu key="products">
-          <template #icon><ShoppingOutlined /></template>
-          <template #title>商品管理</template>
-          <a-menu-item key="/categories">商品分类</a-menu-item>
-          <a-menu-item key="/products">商品列表</a-menu-item>
-        </a-sub-menu>
-        <a-menu-item key="/shipping">
-          <template #icon><CarOutlined /></template>
-          运费模板
-        </a-menu-item>
-        <a-menu-item key="/orders">
-          <template #icon><FileTextOutlined /></template>
-          订单管理
-        </a-menu-item>
-        <a-menu-item key="/withdrawals">
-          <template #icon><WalletOutlined /></template>
-          提现管理
-        </a-menu-item>
-        <a-menu-item key="/dividends">
-          <template #icon><BarChartOutlined /></template>
-          业绩分红
-        </a-menu-item>
-        <a-sub-menu key="system">
-          <template #icon><SettingOutlined /></template>
-          <template #title>系统管理</template>
-          <a-menu-item key="/system/roles">角色管理</a-menu-item>
-          <a-menu-item key="/system/admins">管理员</a-menu-item>
-          <a-menu-item key="/system/logs">操作日志</a-menu-item>
-          <a-menu-item key="/system/config">系统配置</a-menu-item>
-        </a-sub-menu>
+        <template v-for="item in visibleMenu" :key="item.key">
+          <a-sub-menu v-if="item.children" :key="item.key">
+            <template #icon><component :is="item.icon" /></template>
+            <template #title>{{ item.title }}</template>
+            <a-menu-item v-for="child in item.children" :key="child.key">
+              {{ child.title }}
+            </a-menu-item>
+          </a-sub-menu>
+          <a-menu-item v-else :key="item.key">
+            <template #icon><component :is="item.icon" /></template>
+            {{ item.title }}
+          </a-menu-item>
+        </template>
       </a-menu>
     </a-layout-sider>
 
