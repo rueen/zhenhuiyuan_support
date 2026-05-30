@@ -19,7 +19,7 @@ const memberColumns = [
 
 const levelColumns = [
   { title: '等级', dataIndex: 'level_name' },
-  { title: '分红池比例', dataIndex: 'dividend_pool_rate' },
+  { title: '分红池比例', dataIndex: 'pool_rate' },
   { title: '等级池金额', dataIndex: 'level_pool_amount' },
 ]
 
@@ -36,18 +36,18 @@ onMounted(fetchData)
     <a-spin :spinning="loading">
       <template v-if="data">
         <a-descriptions title="周期信息" bordered :column="2" style="margin-bottom:24px">
-          <a-descriptions-item label="周期名称">{{ data.period_name }}</a-descriptions-item>
-          <a-descriptions-item label="统计区间">{{ data.start_date }} ~ {{ data.end_date }}</a-descriptions-item>
-          <a-descriptions-item label="周期销售额">{{ data.sales_amount }}</a-descriptions-item>
-          <a-descriptions-item label="总分红池">{{ data.pool_amount }}</a-descriptions-item>
-          <a-descriptions-item label="生成时间">{{ data.created_at }}</a-descriptions-item>
+          <a-descriptions-item label="周期名称">{{ data.period.period_name }}</a-descriptions-item>
+          <a-descriptions-item label="统计区间">{{ data.period.start_date }} ~ {{ data.period.end_date }}</a-descriptions-item>
+          <a-descriptions-item label="周期销售额">{{ data.period.total_sales }}</a-descriptions-item>
+          <a-descriptions-item label="总分红池">{{ data.period.pool_amount }}</a-descriptions-item>
+          <a-descriptions-item label="生成时间">{{ data.period.created_at }}</a-descriptions-item>
         </a-descriptions>
 
         <a-card title="各等级分池" :bordered="false" size="small" style="margin-bottom:16px">
           <a-table
             :columns="levelColumns"
-            :data-source="data.level_pools"
-            row-key="level_name"
+            :data-source="data.levels"
+            row-key="id"
             :pagination="false"
             size="small"
           />
@@ -56,7 +56,7 @@ onMounted(fetchData)
         <a-card title="会员应分明细" :bordered="false" size="small">
           <a-table
             :columns="memberColumns"
-            :data-source="data.member_shares"
+            :data-source="data.members"
             row-key="member_id"
             :pagination="{ pageSize: 20, showTotal: t => `共 ${t} 条` }"
             size="small"

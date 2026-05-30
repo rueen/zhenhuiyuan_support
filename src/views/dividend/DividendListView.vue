@@ -89,10 +89,21 @@ async function submitCreate() {
           <a-input v-model:value="createForm.period_name" placeholder="如 2024年第1季度" />
         </a-form-item>
         <a-form-item label="开始日期" required>
-          <a-input v-model:value="createForm.start_date" placeholder="格式 YYYY-MM-DD，如 2024-01-01" />
+          <a-date-picker
+            v-model:value="createForm.start_date"
+            value-format="YYYY-MM-DD"
+            style="width:100%"
+            placeholder="请选择开始日期"
+          />
         </a-form-item>
         <a-form-item label="结束日期" required>
-          <a-input v-model:value="createForm.end_date" placeholder="格式 YYYY-MM-DD，如 2024-03-31" />
+          <a-date-picker
+            v-model:value="createForm.end_date"
+            value-format="YYYY-MM-DD"
+            style="width:100%"
+            placeholder="请选择结束日期"
+            :disabled-date="d => createForm.start_date && d.isBefore(createForm.start_date, 'day')"
+          />
         </a-form-item>
         <a-alert message="生成逻辑：统计区间内已完成订单销售额，按等级分红池比例计算各会员应分金额，仅统计不入账" type="info" show-icon />
       </a-form>
