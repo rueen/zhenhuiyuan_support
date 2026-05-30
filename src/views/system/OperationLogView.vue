@@ -2,7 +2,7 @@
  * @Author: diaochan diaochan@seatent.com
  * @Date: 2026-05-29 21:04:22
  * @LastEditors: diaochan diaochan@seatent.com
- * @LastEditTime: 2026-05-30 20:51:29
+ * @LastEditTime: 2026-05-30 21:35:50
  * @FilePath: /zhenhuiyuan_support/src/views/system/OperationLogView.vue
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 -->
@@ -14,7 +14,7 @@ const loading = ref(false)
 const dataSource = ref([])
 const total = ref(0)
 const pagination = reactive({ current: 1, pageSize: 20 })
-const filters = reactive({ keyword: '', adminId: '' })
+const filters = reactive({ keyword: '', adminUsername: '' })
 
 const columns = [
   { title: '操作人', dataIndex: 'admin_username', width: 110 },
@@ -33,7 +33,7 @@ async function fetchList() {
       page: pagination.current,
       pageSize: pagination.pageSize,
       keyword: filters.keyword || undefined,
-      adminId: filters.adminId || undefined,
+      adminUsername: filters.adminUsername || undefined,
     })
     dataSource.value = res.list
     total.value = res.total
@@ -43,7 +43,7 @@ onMounted(fetchList)
 
 function onTableChange(pag) { pagination.current = pag.current; pagination.pageSize = pag.pageSize; fetchList() }
 function search() { pagination.current = 1; fetchList() }
-function reset() { filters.keyword = ''; filters.adminId = ''; search() }
+function reset() { filters.keyword = ''; filters.adminUsername = ''; search() }
 
 /**
  * 将请求参数格式化为缩进 JSON 字符串，容错处理字符串/对象两种类型
@@ -79,7 +79,7 @@ function formatParams(val) {
   <div>
     <div class="filter-bar" style="margin-bottom:16px">
       <a-input v-model:value="filters.keyword" placeholder="关键词" style="width:200px" allow-clear />
-      <a-input v-model:value="filters.adminId" placeholder="管理员ID" style="width:140px" allow-clear />
+      <a-input v-model:value="filters.adminUsername" placeholder="操作人" style="width:140px" allow-clear />
       <a-button type="primary" @click="search">查询</a-button>
       <a-button @click="reset">重置</a-button>
     </div>
