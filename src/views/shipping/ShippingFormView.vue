@@ -18,7 +18,20 @@ const form = reactive({
   rules: [],
 })
 
-function addRule() {
+/** 新建模板时初始化默认规则（is_default_group=1，始终存在且不可删除） */
+function initDefaultRule() {
+  form.rules.push({
+    region_codes: [],
+    is_default_group: 1,
+    first_weight: 1000,
+    first_fee: '10.00',
+    additional_weight: 500,
+    additional_fee: '5.00',
+  })
+}
+
+/** 添加一条区域规则（is_default_group=0） */
+function addAreaRule() {
   form.rules.push({
     region_codes: [],
     is_default_group: 0,
@@ -29,6 +42,10 @@ function addRule() {
   })
 }
 
+/**
+ * 删除区域规则（默认规则不可删除）
+ * @param {number} index - 规则在 form.rules 中的索引
+ */
 function removeRule(index) {
   form.rules.splice(index, 1)
 }
@@ -45,14 +62,15 @@ function getOccupiedCodes(currentIndex) {
 }
 
 async function fetchTemplate() {
-  if (!isEdit.value) { addRule(); return }
+  if (!isEdit.value) { initDefaultRule(); return }
   pageLoading.value = true
   try {
     const data = await getShippingTemplate(route.params.id)
     form.name = data.name
     form.is_default = data.is_default ?? 0
     form.rules = data.rules || []
-    if (!form.rules.length) addRule()
+    // 若接口数据中没有默认规则，自动补充一条
+    if (!form.rules.some(r => r.is_default_group === 1)) initDefaultRule()
   } finally { pageLoading.value = false }
 }
 
@@ -101,9 +119,14 @@ async function submit() {
         <a-form-item label="计费规则">
           <div v-for="(rule, index) in form.rules" :key="index" class="rule-item">
             <div class="rule-header">
-              <span class="rule-index">规则 {{ index + 1 }}</span>
-              <a-switch v-model:checked="rule.is_default_group" :checked-value="1" :un-checked-value="0" checked-children="默认规则" un-checked-children="区域规则" />
-              <a-button type="text" danger @click="removeRule(index)"><MinusCircleOutlined /></a-button>
+              <a-tag v-if="rule.is_default_group" color="blue">默认规则</a-tag>
+              <span v-else class="rule-index">区域规则</span>
+              <a-button
+                v-if="!rule.is_default_group"
+                type="text"
+                danger
+                @click="removeRule(index)"
+              ><MinusCircleOutlined /></a-button>
             </div>
             <a-row :gutter="16">
               <a-col :span="6">
@@ -134,8 +157,8 @@ async function submit() {
               />
             </a-form-item>
           </div>
-          <a-button type="dashed" @click="addRule" style="width:100%;margin-top:8px">
-            <PlusOutlined /> 添加规则
+          <a-button type="dashed" @click="addAreaRule" style="width:100%;margin-top:8px">
+            <PlusOutlined /> 添加区域规则
           </a-button>
         </a-form-item>
 
