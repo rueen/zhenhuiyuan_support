@@ -36,7 +36,9 @@ request.interceptors.response.use(
       window.location.href = `/login?redirect=${redirect}`
       return Promise.reject(error)
     }
-    message.error(error.message || '网络错误')
+    // 优先使用后端返回的业务提示，降级为 axios 错误信息
+    const msg = error.response?.data?.message || error.message || '网络错误'
+    message.error(msg)
     return Promise.reject(error)
   },
 )
