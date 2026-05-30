@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { getMembers, updateMember, updateMemberParent, updateMemberLevel } from '@/api/member'
+import { getMembers, getMember, updateMember, updateMemberParent, updateMemberLevel } from '@/api/member'
 import { getLevels } from '@/api/level'
 
 const router = useRouter()
@@ -20,14 +20,14 @@ const filters = reactive({ keyword: '', levelId: undefined, status: undefined })
 const levelOptions = ref([])
 
 const columns = [
-  { title: 'ID', dataIndex: 'id', width: 80 },
+  // { title: 'ID', dataIndex: 'id', width: 80 },
   { title: '昵称', dataIndex: 'nickname' },
   { title: '手机号', dataIndex: 'phone' },
   { title: '等级', dataIndex: 'level_name' },
   { title: '贡献值', dataIndex: 'cumulative_contribution', width: 100 },
   { title: '可提余额', dataIndex: 'withdrawable_balance', width: 110 },
   { title: '邀请码', dataIndex: 'invite_code', width: 110 },
-  { title: '上级ID', dataIndex: 'parent_id', width: 90 },
+  { title: '上级', dataIndex: 'parent_nickname', width: 90 },
   { title: '状态', dataIndex: 'status', width: 90 },
   { title: '注册时间', dataIndex: 'created_at', width: 160 },
   { title: '操作', key: 'action', width: 220, fixed: 'right' },
@@ -93,19 +93,59 @@ async function submitEdit() {
 
 // 变更上级
 const parentOpen = ref(false)
-const parentForm = reactive({ id: null, parentId: '' })
+const parentForm = reactive({ id: null, parentId: null })
 
-function openParent(record) {
+/** 上级搜索下拉选项 */
+const parentOptions = ref([])
+const parentSearchLoading = ref(false)
+/** 防抖定时器 */
+let parentSearchTimer = null
+
+/**
+ * 远程搜索可选上级（防抖 300ms）
+ * @param {string} keyword - 昵称或手机号关键词
+ */
+async function searchParentOptions(keyword) {
+  clearTimeout(parentSearchTimer)
+  if (!keyword?.trim()) {
+    parentOptions.value = []
+    return
+  }
+  parentSearchTimer = setTimeout(async () => {
+    parentSearchLoading.value = true
+    try {
+      const res = await getMembers({ keyword: keyword.trim(), pageSize: 20 })
+      // 过滤自身（后端已做环路校验，此处额外过滤以改善体验）
+      parentOptions.value = res.list.filter(m => m.id !== parentForm.id)
+    } finally {
+      parentSearchLoading.value = false
+    }
+  }, 300)
+}
+
+/**
+ * 打开变更上级弹窗，若已有上级则预加载其信息
+ * @param {object} record - 当前会员行数据
+ */
+async function openParent(record) {
   parentForm.id = record.id
-  parentForm.parentId = record.parent_id ? String(record.parent_id) : ''
+  parentForm.parentId = record.parent_id || null
+  parentOptions.value = []
   parentOpen.value = true
+  // 预加载当前上级信息，保证选中项能正常显示
+  if (record.parent_id) {
+    try {
+      const m = await getMember(record.parent_id)
+      parentOptions.value = [m]
+    } catch (_) { /* 加载失败不阻塞弹窗 */ }
+  }
 }
 
 const parentLoading = ref(false)
 async function submitParent() {
   parentLoading.value = true
   try {
-    await updateMemberParent(parentForm.id, { parent_id: parentForm.parentId ? Number(parentForm.parentId) : null })
+    await updateMemberParent(parentForm.id, { parent_id: parentForm.parentId || null })
     message.success('变更成功')
     parentOpen.value = false
     fetchList()
@@ -200,9 +240,25 @@ async function submitLevel() {
     <!-- 变更上级 -->
     <a-modal v-model:open="parentOpen" title="变更上级" :confirm-loading="parentLoading" @ok="submitParent">
       <a-form layout="vertical" style="margin-top:8px">
-        <a-form-item label="新上级ID（留空则移除上级）">
-          <a-input v-model:value="parentForm.parentId" placeholder="请输入上级会员ID" allow-clear />
+        <a-form-item label="新上级（留空则移除上级）">
+          <a-select
+            v-model:value="parentForm.parentId"
+            show-search
+            allow-clear
+            :filter-option="false"
+            :loading="parentSearchLoading"
+            placeholder="输入昵称或手机号搜索"
+            style="width:100%"
+            :not-found-content="parentSearchLoading ? '搜索中…' : '暂无匹配会员'"
+            @search="searchParentOptions"
+          >
+            <a-select-option v-for="m in parentOptions" :key="m.id" :value="m.id">
+              {{ m.nickname }}
+              <span style="color:rgba(0,0,0,.45);font-size:12px;margin-left:6px">{{ m.phone }}</span>
+            </a-select-option>
+          </a-select>
         </a-form-item>
+        <!-- <a-alert message="不可选择自己或自己的下级" type="info" show-icon /> -->
       </a-form>
     </a-modal>
 
