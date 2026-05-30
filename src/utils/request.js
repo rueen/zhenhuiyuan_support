@@ -29,6 +29,13 @@ request.interceptors.response.use(
     return Promise.reject(new Error(res.message))
   },
   (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('admin_token')
+      // 保留当前路径，登录后可回跳
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search)
+      window.location.href = `/login?redirect=${redirect}`
+      return Promise.reject(error)
+    }
     message.error(error.message || '网络错误')
     return Promise.reject(error)
   },
