@@ -34,7 +34,7 @@ const detailFileList = ref([])
 
 async function customUpload({ file, onSuccess, onError }) {
   try {
-    const sig = await getOssSignature()
+    const sig = await getOssSignature('products')
     const formData = new FormData()
     const key = `${sig.dir}${Date.now()}_${file.name}`
     formData.append('key', key)

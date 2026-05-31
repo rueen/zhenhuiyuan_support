@@ -104,9 +104,9 @@ function openPay(record) {
 // OSS 上传凭证图
 async function customUpload({ file, onSuccess, onError }) {
   try {
-    const sig = await getOssSignature()
+    const sig = await getOssSignature('vouchers')
     const fd = new FormData()
-    const key = `${sig.dir}voucher_${Date.now()}_${file.name}`
+    const key = `${sig.dir}${Date.now()}_${file.name}`
     fd.append('key', key)
     fd.append('OSSAccessKeyId', sig.accessKeyId)
     fd.append('policy', sig.policy)
