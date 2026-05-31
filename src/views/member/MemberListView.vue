@@ -198,7 +198,7 @@ async function submitLevel() {
       :loading="loading"
       :pagination="{ current: pagination.current, pageSize: pagination.pageSize, total, showTotal: t => `共 ${t} 条`, showSizeChanger: true }"
       row-key="id"
-      scroll="{ x: 1200 }"
+      :scroll="{ x: 1200 }"
       @change="onTableChange"
     >
       <template #bodyCell="{ column, record }">
