@@ -6,7 +6,7 @@ import {
   DashboardOutlined, TeamOutlined, TrophyOutlined, ShoppingOutlined,
   CarOutlined, FileTextOutlined, WalletOutlined, BarChartOutlined,
   SettingOutlined, MenuFoldOutlined, MenuUnfoldOutlined, DownOutlined,
-  KeyOutlined, LogoutOutlined,
+  KeyOutlined, LogoutOutlined, ReadOutlined,
 } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/store/auth'
 import { resetAdminPassword } from '@/api/admin'
@@ -35,6 +35,13 @@ const menuConfig = [
     ],
   },
   { key: '/shipping', title: '运费模板', icon: CarOutlined, perm: 'shipping' },
+  {
+    key: 'content', title: '内容管理', icon: ReadOutlined,
+    children: [
+      { key: '/content/columns', title: '栏目管理', perm: 'article' },
+      { key: '/content/articles', title: '文章列表', perm: 'article' },
+    ],
+  },
   { key: '/orders', title: '订单管理', icon: FileTextOutlined, perm: 'order' },
   { key: '/withdrawals', title: '提现管理', icon: WalletOutlined, perm: 'withdrawal' },
   { key: '/dividends', title: '业绩分红', icon: BarChartOutlined, perm: 'dividend' },
@@ -72,6 +79,9 @@ watch(() => route.path, (path) => {
   if (path.startsWith('/products') || path.startsWith('/categories')) {
     openKeys.value = ['products']
     selectedKeys.value = path.startsWith('/categories') ? ['/categories'] : ['/products']
+  } else if (path.startsWith('/content')) {
+    openKeys.value = ['content']
+    selectedKeys.value = path.startsWith('/content/columns') ? ['/content/columns'] : ['/content/articles']
   } else if (path.startsWith('/system')) {
     openKeys.value = ['system']
     selectedKeys.value = [path]

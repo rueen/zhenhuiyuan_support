@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",
+    "@wangeditor/editor": "^5.1.23",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.7.2",
     "pinia": "^2.1.7",
