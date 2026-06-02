@@ -97,6 +97,7 @@ async function submit() {
   if (!form.name) return message.warning('请输入商品名称')
   if (!form.price) return message.warning('请输入价格')
   if (!form.category_id) return message.warning('请选择分类')
+  if (!form.shipping_template_id) return message.warning('请选择运费模板')
   submitLoading.value = true
   try {
     const payload = { ...form }
@@ -151,8 +152,8 @@ async function submit() {
             </a-form-item>
           </a-col>
           <a-col :span="6">
-            <a-form-item label="运费模板">
-              <a-select v-model:value="form.shipping_template_id" placeholder="默认模板" allow-clear style="width:100%">
+            <a-form-item label="运费模板" required>
+              <a-select v-model:value="form.shipping_template_id" placeholder="请选择运费模板" style="width:100%">
                 <a-select-option v-for="s in shippingOptions" :key="s.id" :value="s.id">{{ s.name }}</a-select-option>
               </a-select>
             </a-form-item>
@@ -190,6 +191,7 @@ async function submit() {
             v-model:file-list="mainFileList"
             list-type="picture-card"
             :max-count="9"
+            multiple
             :custom-request="customUpload"
             @change="handleMainChange"
           >
@@ -208,6 +210,7 @@ async function submit() {
             v-model:file-list="detailFileList"
             list-type="picture-card"
             :max-count="9"
+            multiple
             :custom-request="customUpload"
             @change="handleDetailChange"
           >
