@@ -120,13 +120,17 @@ async function submit() {
       @back="router.push('/content/articles')"
     />
     <a-spin :spinning="pageLoading">
-      <a-form layout="vertical">
+      <a-form
+        :label-col="{ span: 4 }"
+        :wrapper-col="{ span: 16 }"
+      >
         <a-form-item label="文章标题" required>
           <a-input
             v-model:value="form.title"
             placeholder="请输入文章标题，最长 100 字"
             :maxlength="100"
             show-count
+            style="width: 400px;"
           />
         </a-form-item>
 
@@ -135,7 +139,7 @@ async function submit() {
             v-model:value="form.column_id"
             placeholder="不归属任何栏目"
             allow-clear
-            style="width:100%"
+            style="width: 400px;"
           >
             <a-select-option v-for="c in columnOptions" :key="c.id" :value="c.id">
               {{ c.name }}
@@ -143,20 +147,17 @@ async function submit() {
           </a-select>
         </a-form-item>
         
-        <a-form-item>
-          <template #label>
-            location 标识
-            <span style="font-size:12px;color:#aaa;font-weight:400;margin-left:6px">留空则 C 端无法通过标识直接访问</span>
-          </template>
+        <a-form-item label="location 标识">
           <a-input
             v-model:value="form.location"
             placeholder="如 privacy-policy"
             :maxlength="64"
+            style="width: 400px;"
           />
         </a-form-item>
 
         <a-form-item label="排序">
-          <a-input-number v-model:value="form.sort" style="width:100%" />
+          <a-input-number v-model:value="form.sort" style="width: 400px;" />
         </a-form-item>
         
         <a-form-item label="状态">

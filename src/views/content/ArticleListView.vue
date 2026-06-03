@@ -14,11 +14,11 @@ const columnOptions = ref([])
 
 const columns = [
   { title: '标题', dataIndex: 'title', ellipsis: true },
-  { title: '所属栏目', dataIndex: 'column_name', width: 130 },
+  { title: '所属栏目', dataIndex: 'column_name', },
   { title: 'location 标识', dataIndex: 'location', width: 160 },
   { title: '排序', dataIndex: 'sort', width: 80 },
   { title: '状态', dataIndex: 'status', width: 90 },
-  { title: '创建时间', dataIndex: 'created_at', width: 170 },
+  { title: '创建时间', dataIndex: 'created_at' },
   { title: '操作', key: 'action', width: 120, fixed: 'right' },
 ]
 

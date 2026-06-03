@@ -6,7 +6,7 @@ import {
   DashboardOutlined, TeamOutlined, TrophyOutlined, ShoppingOutlined,
   CarOutlined, FileTextOutlined, WalletOutlined, BarChartOutlined,
   SettingOutlined, MenuFoldOutlined, MenuUnfoldOutlined, DownOutlined,
-  KeyOutlined, LogoutOutlined, ReadOutlined,
+  KeyOutlined, LogoutOutlined, ReadOutlined, NotificationOutlined,
 } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/store/auth'
 import { resetAdminPassword } from '@/api/admin'
@@ -40,6 +40,12 @@ const menuConfig = [
     children: [
       { key: '/content/columns', title: '栏目管理', perm: 'article' },
       { key: '/content/articles', title: '文章列表', perm: 'article' },
+    ],
+  },
+  {
+    key: 'marketing', title: '营销管理', icon: NotificationOutlined,
+    children: [
+      { key: '/marketing/ads', title: '广告', perm: 'ad' },
     ],
   },
   { key: '/orders', title: '订单管理', icon: FileTextOutlined, perm: 'order' },
@@ -82,6 +88,9 @@ watch(() => route.path, (path) => {
   } else if (path.startsWith('/content')) {
     openKeys.value = ['content']
     selectedKeys.value = path.startsWith('/content/columns') ? ['/content/columns'] : ['/content/articles']
+  } else if (path.startsWith('/marketing')) {
+    openKeys.value = ['marketing']
+    selectedKeys.value = ['/marketing/ads']
   } else if (path.startsWith('/system')) {
     openKeys.value = ['system']
     selectedKeys.value = [path]
