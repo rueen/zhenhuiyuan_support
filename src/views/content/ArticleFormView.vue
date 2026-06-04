@@ -5,6 +5,7 @@ import { message } from 'ant-design-vue'
 import { createEditor, createToolbar } from '@wangeditor/editor'
 import '@wangeditor/editor/dist/css/style.css'
 import { getArticle, createArticle, updateArticle, getArticleColumns } from '@/api/article'
+import { getOssSignature } from '@/api/oss'
 
 const route = useRoute()
 const router = useRouter()
@@ -38,6 +39,29 @@ function initEditor(initialHtml = '') {
       placeholder: '请输入正文内容...',
       onChange(e) {
         form.content = e.getHtml()
+      },
+      MENU_CONF: {
+        /** 图片上传：使用 OSS 直传，与管理端其他图片上传保持一致 */
+        uploadImage: {
+          async customUpload(file, insertFn) {
+            try {
+              const sig = await getOssSignature('articles')
+              const formData = new FormData()
+              const key = `${sig.dir}${Date.now()}_${file.name}`
+              formData.append('key', key)
+              formData.append('OSSAccessKeyId', sig.accessKeyId)
+              formData.append('policy', sig.policy)
+              formData.append('signature', sig.signature)
+              formData.append('success_action_status', '200')
+              formData.append('file', file)
+              await fetch(sig.host, { method: 'POST', body: formData })
+              const url = `${sig.host}/${key}`
+              insertFn(url, file.name, url)
+            } catch {
+              message.error('图片上传失败，请重试')
+            }
+          },
+        },
       },
     },
     mode: 'default',
