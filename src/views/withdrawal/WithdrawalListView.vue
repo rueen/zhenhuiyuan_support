@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { getWithdrawals, getWithdrawal, reviewWithdrawal, payWithdrawal } from '@/api/withdrawal'
-import { getOssSignature } from '@/api/oss'
+import { useOssUpload } from '@/composables/useOssUpload'
 
 const loading = ref(false)
 const dataSource = ref([])
@@ -101,23 +101,18 @@ function openPay(record) {
   payOpen.value = true
 }
 
-// OSS 上传凭证图
-async function customUpload({ file, onSuccess, onError }) {
-  try {
-    const sig = await getOssSignature('vouchers')
-    const fd = new FormData()
-    const key = `${sig.dir}${Date.now()}_${file.name}`
-    fd.append('key', key)
-    fd.append('OSSAccessKeyId', sig.accessKeyId)
-    fd.append('policy', sig.policy)
-    fd.append('signature', sig.signature)
-    fd.append('success_action_status', '200')
-    fd.append('file', file)
-    await fetch(sig.host, { method: 'POST', body: fd })
-    const url = `${sig.host}/${key}`
-    payForm.pay_voucher = url
-    onSuccess({ url }, file)
-  } catch (e) { onError(e) }
+// 凭证须清晰可辨，最低压缩（质量 0.92，限宽 2000px）
+const { customUpload: _uploadVoucher } = useOssUpload('vouchers', { quality: 0.92, maxWidth: 2000 })
+
+/** 上传成功后额外写入 payForm.pay_voucher */
+async function customUpload(options) {
+  await _uploadVoucher({
+    ...options,
+    onSuccess(res, file) {
+      payForm.pay_voucher = res.url
+      options.onSuccess(res, file)
+    },
+  })
 }
 
 async function submitPay() {

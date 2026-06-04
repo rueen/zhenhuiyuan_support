@@ -6,6 +6,7 @@ import { createEditor, createToolbar } from '@wangeditor/editor'
 import '@wangeditor/editor/dist/css/style.css'
 import { getArticle, createArticle, updateArticle, getArticleColumns } from '@/api/article'
 import { getOssSignature } from '@/api/oss'
+import { compressImage } from '@/utils/imageCompress'
 
 const route = useRoute()
 const router = useRouter()
@@ -43,20 +44,22 @@ function initEditor(initialHtml = '') {
       MENU_CONF: {
         /** 图片上传：使用 OSS 直传，与管理端其他图片上传保持一致 */
         uploadImage: {
+          /** 富文本图片：文章内容图，质量 0.82，限宽 1600px */
           async customUpload(file, insertFn) {
             try {
+              const compressed = await compressImage(file, { quality: 0.82, maxWidth: 1600 })
               const sig = await getOssSignature('articles')
               const formData = new FormData()
-              const key = `${sig.dir}${Date.now()}_${file.name}`
+              const key = `${sig.dir}${Date.now()}_${compressed.name}`
               formData.append('key', key)
               formData.append('OSSAccessKeyId', sig.accessKeyId)
               formData.append('policy', sig.policy)
               formData.append('signature', sig.signature)
               formData.append('success_action_status', '200')
-              formData.append('file', file)
+              formData.append('file', compressed)
               await fetch(sig.host, { method: 'POST', body: formData })
               const url = `${sig.host}/${key}`
-              insertFn(url, file.name, url)
+              insertFn(url, compressed.name, url)
             } catch {
               message.error('图片上传失败，请重试')
             }

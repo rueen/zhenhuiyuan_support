@@ -7,7 +7,7 @@ import { PlusOutlined } from '@ant-design/icons-vue'
 import { getAd, createAd, updateAd, getAdPositions } from '@/api/ad'
 import { getArticleColumns, getArticles } from '@/api/article'
 import { getCategories, getProducts } from '@/api/product'
-import { getOssSignature } from '@/api/oss'
+import { useOssUpload } from '@/composables/useOssUpload'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,27 +28,9 @@ const form = reactive({
   sort: 0,
 })
 
-/** 广告图上传 */
+/** 广告图上传：Banner 需视觉锐利，质量 0.85，限宽 1200px */
 const imageFileList = ref([])
-
-async function customUpload({ file, onSuccess, onError }) {
-  try {
-    const sig = await getOssSignature('ads')
-    const formData = new FormData()
-    const key = `${sig.dir}${Date.now()}_${file.name}`
-    formData.append('key', key)
-    formData.append('OSSAccessKeyId', sig.accessKeyId)
-    formData.append('policy', sig.policy)
-    formData.append('signature', sig.signature)
-    formData.append('success_action_status', '200')
-    formData.append('file', file)
-    await fetch(sig.host, { method: 'POST', body: formData })
-    const url = `${sig.host}/${key}`
-    onSuccess({ url }, file)
-  } catch (e) {
-    onError(e)
-  }
-}
+const { customUpload } = useOssUpload('ads', { quality: 0.85, maxWidth: 1200 })
 
 function handleImageChange({ fileList }) {
   imageFileList.value = fileList

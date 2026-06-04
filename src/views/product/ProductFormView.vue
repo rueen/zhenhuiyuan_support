@@ -5,7 +5,7 @@ import { message } from 'ant-design-vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 import { getProduct, createProduct, updateProduct, getCategories } from '@/api/product'
 import { getShippingTemplates } from '@/api/shipping'
-import { getOssSignature } from '@/api/oss'
+import { useOssUpload } from '@/composables/useOssUpload'
 
 const route = useRoute()
 const router = useRouter()
@@ -34,24 +34,10 @@ const coverFileList = ref([])
 const mainFileList = ref([])
 const detailFileList = ref([])
 
-async function customUpload({ file, onSuccess, onError }) {
-  try {
-    const sig = await getOssSignature('products')
-    const formData = new FormData()
-    const key = `${sig.dir}${Date.now()}_${file.name}`
-    formData.append('key', key)
-    formData.append('OSSAccessKeyId', sig.accessKeyId)
-    formData.append('policy', sig.policy)
-    formData.append('signature', sig.signature)
-    formData.append('success_action_status', '200')
-    formData.append('file', file)
-    await fetch(sig.host, { method: 'POST', body: formData })
-    const url = `${sig.host}/${key}`
-    onSuccess({ url }, file)
-  } catch (e) {
-    onError(e)
-  }
-}
+/** 封面/主图：较高质量，适合详情页展示 */
+const { customUpload } = useOssUpload('products', { quality: 0.85, maxWidth: 1200 })
+/** 详情图：长图内容，适度压缩，放宽宽度限制 */
+const { customUpload: customUploadDetail } = useOssUpload('products', { quality: 0.80, maxWidth: 1600 })
 
 function handleCoverChange({ fileList }) {
   coverFileList.value = fileList
@@ -211,7 +197,7 @@ async function submit() {
             list-type="picture-card"
             :max-count="9"
             multiple
-            :custom-request="customUpload"
+            :custom-request="customUploadDetail"
             @change="handleDetailChange"
           >
             <div v-if="detailFileList.length < 9">
