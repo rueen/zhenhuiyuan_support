@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
@@ -7,9 +7,11 @@ import {
   getMembers,
   getMemberContributionLogs,
   getMemberBalanceLogs,
+  getMemberHealthRecords,
   updateMember,
   updateMemberParent,
   updateMemberLevel,
+  updateMemberDevice,
 } from '@/api/member'
 import { getLevels } from '@/api/level'
 
@@ -53,6 +55,14 @@ const balanceColumns = [
   { title: '来源', dataIndex: 'source' },
   { title: '说明', dataIndex: 'remark' },
   { title: '时间', dataIndex: 'created_at', width: 160 },
+]
+
+const patientColumns = [
+  { title: '就诊人', dataIndex: 'patname' },
+  { title: '性别', dataIndex: 'sex', width: 70 },
+  { title: '年龄', dataIndex: 'age', width: 70 },
+  { title: '就诊时间', dataIndex: 'visitdate', width: 170 },
+  { title: '操作', key: 'action', width: 100 },
 ]
 
 async function fetchInfo() {
@@ -150,7 +160,6 @@ async function openParent() {
   parentForm.parentId = info.value.parent_id || null
   parentOptions.value = []
   parentOpen.value = true
-  // 预加载当前上级信息，保证选中项能正常显示
   if (info.value.parent_id) {
     try {
       const m = await getMember(info.value.parent_id)
@@ -193,6 +202,77 @@ async function submitLevel() {
     levelLoading.value = false
   }
 }
+
+// ---- AI 体检设备绑定 ----
+const deviceOpen = ref(false)
+const deviceForm = reactive({ hardware_enabled: false, mac_address: '' })
+
+/** 打开 AI 体检弹窗，回填当前设置 */
+function openDevice() {
+  deviceForm.hardware_enabled = info.value.hardware_enabled === 1
+  deviceForm.mac_address = info.value.mac_address || ''
+  deviceOpen.value = true
+}
+
+const deviceLoading = ref(false)
+async function submitDevice() {
+  if (deviceForm.hardware_enabled && !deviceForm.mac_address.trim()) {
+    message.warning('开通 AI 体检时 macAddress 为必填项')
+    return
+  }
+  deviceLoading.value = true
+  try {
+    await updateMemberDevice(id, {
+      hardware_enabled: deviceForm.hardware_enabled ? 1 : 0,
+      mac_address: deviceForm.hardware_enabled ? deviceForm.mac_address.trim() : null,
+    })
+    message.success('设置成功')
+    deviceOpen.value = false
+    await fetchInfo()
+    if (info.value.hardware_enabled === 1) fetchPatientList()
+  } finally {
+    deviceLoading.value = false
+  }
+}
+
+// ---- 体检记录 ----
+
+/** 是否显示体检记录 Tab */
+const hasDevice = computed(() => info.value?.hardware_enabled === 1)
+
+const patients = ref([])
+const patientLoading = ref(false)
+
+/** 通过后端接口获取会员体检记录 */
+async function fetchPatientList() {
+  patientLoading.value = true
+  try {
+    const res = await getMemberHealthRecords(id)
+    // 兼容接口返回纯数组或 { list: [] } 两种结构
+    patients.value = Array.isArray(res) ? res : (res?.list ?? [])
+  } catch (e) {
+    message.error('获取体检记录失败：' + e.message)
+  } finally {
+    patientLoading.value = false
+  }
+}
+
+/**
+ * 点击查看报告，新窗口打开体检报告链接
+ * @param {string} patno - 就诊编号
+ */
+function viewReport(patno) {
+  window.open(
+    `https://iot.smfyunpingtai.com/jiayishen/#/pages/pulseReport/pulseReport?patno=${patno}`,
+    '_blank',
+  )
+}
+
+// 开通状态变化后自动拉取/清空体检记录
+watch(hasDevice, (val) => {
+  if (val) fetchPatientList()
+  else patients.value = []
+})
 </script>
 
 <template>
@@ -204,6 +284,7 @@ async function submitLevel() {
         <a-button @click="openEdit">编辑</a-button>
         <a-button @click="openParent">变更上级</a-button>
         <a-button @click="openLevel">调整等级</a-button>
+        <a-button @click="openDevice">AI体检</a-button>
       </a-space>
     </div>
 
@@ -222,6 +303,14 @@ async function submitLevel() {
           <a-descriptions-item label="注册时间">{{ info.created_at }}</a-descriptions-item>
           <a-descriptions-item label="状态">
             <a-tag :color="info.status === 1 ? 'success' : 'default'">{{ info.status === 1 ? '正常' : '禁用' }}</a-tag>
+          </a-descriptions-item>
+          <a-descriptions-item label="AI体检">
+            <a-tag :color="info.hardware_enabled === 1 ? 'processing' : 'default'">
+              {{ info.hardware_enabled === 1 ? '已开通' : '未开通' }}
+            </a-tag>
+            <span v-if="info.mac_address" style="margin-left:8px;color:rgba(0,0,0,.45);font-size:12px">
+              {{ info.mac_address }}
+            </span>
           </a-descriptions-item>
         </a-descriptions>
       </template>
@@ -247,6 +336,22 @@ async function submitLevel() {
           row-key="id"
           @change="(p) => fetchBalances(p.current)"
         />
+      </a-tab-pane>
+      <!-- 仅开通 AI 体检后显示 -->
+      <a-tab-pane v-if="hasDevice" key="patient" tab="体检记录">
+        <a-table
+          :columns="patientColumns"
+          :data-source="patients"
+          :loading="patientLoading"
+          row-key="patno"
+          :pagination="false"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'action'">
+              <a-button type="link" size="small" @click="viewReport(record.patno)">查看报告</a-button>
+            </template>
+          </template>
+        </a-table>
       </a-tab-pane>
     </a-tabs>
 
@@ -301,6 +406,26 @@ async function submitLevel() {
           </a-select>
         </a-form-item>
         <a-alert message="手动调整后等级将被锁定，系统不再自动升/降级" type="warning" show-icon style="margin-top:8px" />
+      </a-form>
+    </a-modal>
+
+    <!-- AI 体检设备绑定 -->
+    <a-modal v-model:open="deviceOpen" title="AI体检设置" :confirm-loading="deviceLoading" @ok="submitDevice">
+      <a-form layout="vertical" style="margin-top:8px">
+        <a-form-item label="开通功能">
+          <a-switch v-model:checked="deviceForm.hardware_enabled" checked-children="开" un-checked-children="关" />
+        </a-form-item>
+        <a-form-item label="设备码 macAddress" :required="deviceForm.hardware_enabled">
+          <a-input
+            v-model:value="deviceForm.mac_address"
+            placeholder="请输入设备 MAC 地址"
+            :disabled="!deviceForm.hardware_enabled"
+            allow-clear
+          />
+          <div v-if="deviceForm.hardware_enabled" style="color:rgba(0,0,0,.45);font-size:12px;margin-top:4px">
+            开通功能时 macAddress 为必填项
+          </div>
+        </a-form-item>
       </a-form>
     </a-modal>
   </div>
