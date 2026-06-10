@@ -59,10 +59,10 @@ const balanceColumns = [
 
 const patientColumns = [
   { title: '就诊人', dataIndex: 'patname' },
-  { title: '性别', dataIndex: 'sex', width: 70 },
-  { title: '年龄', dataIndex: 'age', width: 70 },
-  { title: '就诊时间', dataIndex: 'visitdate', width: 170 },
-  { title: '操作', key: 'action', width: 100 },
+  { title: '性别', dataIndex: 'sex' },
+  { title: '年龄', dataIndex: 'age' },
+  { title: '就诊时间', dataIndex: 'visitdate' },
+  { title: '操作', key: 'action' },
 ]
 
 async function fetchInfo() {
