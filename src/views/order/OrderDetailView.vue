@@ -61,7 +61,14 @@ function handleCancel() {
 
 <template>
   <div>
-    <a-page-header title="订单详情" @back="router.push('/orders')" style="padding:0 0 16px" />
+    <!-- 顶部操作栏 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <a-button @click="router.push('/orders')">← 返回</a-button>
+      <a-space v-if="order">
+        <a-button v-if="order.status === 1" type="primary" @click="shipOpen = true">发货</a-button>
+        <a-button v-if="[0, 1].includes(order.status)" danger @click="handleCancel">取消订单</a-button>
+      </a-space>
+    </div>
     <a-spin :spinning="loading">
       <template v-if="order">
         <a-descriptions title="基本信息" bordered :column="2" style="margin-bottom:24px">
@@ -90,11 +97,6 @@ function handleCancel() {
         <a-card title="物流包裹" :bordered="false" size="small" style="margin-bottom:16px">
           <a-table :columns="shipmentColumns" :data-source="order.shipments" row-key="id" :pagination="false" size="small" />
         </a-card>
-
-        <a-space>
-          <a-button v-if="order.status === 1" type="primary" @click="shipOpen = true">发货</a-button>
-          <a-button v-if="[0, 1].includes(order.status)" danger @click="handleCancel">取消订单</a-button>
-        </a-space>
       </template>
     </a-spin>
 
