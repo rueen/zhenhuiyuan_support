@@ -224,7 +224,7 @@ async function submitDevice() {
   try {
     await updateMemberDevice(id, {
       hardware_enabled: deviceForm.hardware_enabled ? 1 : 0,
-      mac_address: deviceForm.hardware_enabled ? deviceForm.mac_address.trim() : null,
+      mac_address: deviceForm.mac_address.trim() || null,
     })
     message.success('设置成功')
     deviceOpen.value = false
