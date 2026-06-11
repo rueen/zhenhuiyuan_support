@@ -1,3 +1,11 @@
+<!--
+ * @Author: diaochan diaochan@seatent.com
+ * @Date: 2026-05-29 20:59:53
+ * @LastEditors: diaochan diaochan@seatent.com
+ * @LastEditTime: 2026-06-11 17:02:28
+ * @FilePath: /zhenhuiyuan_support/src/views/order/OrderListView.vue
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+-->
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -20,7 +28,7 @@ const STATUS_MAP = {
 
 const columns = [
   { title: '订单号', dataIndex: 'order_no', width: 180 },
-  { title: '会员ID', dataIndex: 'member_id', width: 90 },
+  { title: '会员', dataIndex: 'member_nickname', width: 90 },
   { title: '商品金额', dataIndex: 'product_amount', width: 110 },
   { title: '运费', dataIndex: 'shipping_fee', width: 90 },
   { title: '实付', dataIndex: 'pay_amount', width: 100 },

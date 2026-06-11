@@ -38,17 +38,15 @@ const balancePage = ref(1)
 const balanceLoading = ref(false)
 
 const contribColumns = [
-  { title: 'ID', dataIndex: 'id', width: 80 },
-  { title: '变动值', dataIndex: 'amount' },
-  { title: '当前总贡献值', dataIndex: 'current_contribution' },
-  { title: '来源订单', dataIndex: 'order_id' },
+  { title: '变动值', dataIndex: 'change_amount' },
+  { title: '当前总贡献值', dataIndex: 'balance_after' },
+  { title: '来源订单', dataIndex: 'related_order_no' },
   { title: '类型', dataIndex: 'type' },
   { title: '说明', dataIndex: 'remark' },
   { title: '时间', dataIndex: 'created_at', width: 160 },
 ]
 
 const balanceColumns = [
-  { title: 'ID', dataIndex: 'id', width: 80 },
   { title: '变动金额', dataIndex: 'amount' },
   { title: '当前余额', dataIndex: 'current_balance' },
   { title: '类型', dataIndex: 'type' },
