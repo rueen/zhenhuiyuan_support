@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { getOrder, shipOrder, cancelOrder } from '@/api/order'
+import { getOrder, shipOrder, cancelOrder, getLogisticsCompanies, getShipmentTrack } from '@/api/order'
 
 const route = useRoute()
 const router = useRouter()
@@ -29,6 +29,7 @@ const shipmentColumns = [
   { title: '物流公司', dataIndex: 'logistics_company' },
   { title: '运单号', dataIndex: 'tracking_no' },
   { title: '发货时间', dataIndex: 'created_at' },
+  { title: '操作', key: 'action' },
 ]
 
 async function fetchOrder() {
@@ -37,16 +38,61 @@ async function fetchOrder() {
 }
 onMounted(fetchOrder)
 
-// 发货
+// 物流公司列表
+const logisticsCompanies = ref([])
+async function fetchLogisticsCompanies() {
+  try { logisticsCompanies.value = await getLogisticsCompanies() } catch {}
+}
+onMounted(fetchLogisticsCompanies)
+
+// 发货 / 修改物流（多包裹）
 const shipOpen = ref(false)
-const shipForm = ref({ logistics_company: '', tracking_no: '' })
+const shipPackages = ref([{ logistics_company: '', logistics_code: '', tracking_no: '' }])
 const shipLoading = ref(false)
 
+function openShipModal() {
+  const shipments = order.value?.shipments
+  if (order.value?.status === 2 && shipments?.length) {
+    // 修改物流：回填已有包裹信息，logistics_code 通过名称反查
+    shipPackages.value = shipments.map(s => {
+      const matched = logisticsCompanies.value.find(c => c.name === s.logistics_company)
+      return {
+        logistics_company: s.logistics_company,
+        logistics_code: matched?.code ?? '',
+        tracking_no: s.tracking_no,
+      }
+    })
+  } else {
+    shipPackages.value = [{ logistics_company: '', logistics_code: '', tracking_no: '' }]
+  }
+  shipOpen.value = true
+}
+
+function addPackage() {
+  shipPackages.value.push({ logistics_company: '', logistics_code: '', tracking_no: '' })
+}
+
+function removePackage(index) {
+  shipPackages.value.splice(index, 1)
+}
+
+function onCompanyChange(index, code) {
+  const company = logisticsCompanies.value.find(c => c.code === code)
+  if (company) {
+    shipPackages.value[index].logistics_company = company.name
+    shipPackages.value[index].logistics_code = company.code
+  }
+}
+
 async function submitShip() {
-  if (!shipForm.value.logistics_company || !shipForm.value.tracking_no) return message.warning('请填写物流信息')
+  for (const pkg of shipPackages.value) {
+    if (!pkg.logistics_code || !pkg.tracking_no) return message.warning('请填写所有包裹的物流信息')
+  }
   shipLoading.value = true
   try {
-    await shipOrder(id, shipForm.value)
+    for (const pkg of shipPackages.value) {
+      await shipOrder(id, pkg)
+    }
     message.success('发货成功')
     shipOpen.value = false
     fetchOrder()
@@ -57,6 +103,24 @@ async function submitShip() {
 function handleCancel() {
   Modal.confirm({ title: '确定取消该订单？', onOk: async () => { await cancelOrder(id); message.success('已取消'); fetchOrder() } })
 }
+
+// 物流轨迹
+const trackOpen = ref(false)
+const trackLoading = ref(false)
+const trackData = ref(null)
+
+async function viewTrack(shipment) {
+  trackOpen.value = true
+  trackLoading.value = true
+  trackData.value = null
+  try {
+    trackData.value = await getShipmentTrack(id, shipment.id)
+  } catch {
+    message.error('查询物流轨迹失败')
+  } finally {
+    trackLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -65,7 +129,9 @@ function handleCancel() {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <a-button @click="router.push('/orders')">← 返回</a-button>
       <a-space v-if="order">
-        <a-button v-if="order.status === 1" type="primary" @click="shipOpen = true">发货</a-button>
+        <a-button v-if="[1, 2].includes(order.status)" type="primary" @click="openShipModal">
+          {{ order.status === 1 ? '发货' : '修改物流' }}
+        </a-button>
         <a-button v-if="[0, 1].includes(order.status)" danger @click="handleCancel">取消订单</a-button>
       </a-space>
     </div>
@@ -95,20 +161,67 @@ function handleCancel() {
         </a-card>
 
         <a-card title="物流包裹" :bordered="false" size="small" style="margin-bottom:16px">
-          <a-table :columns="shipmentColumns" :data-source="order.shipments" row-key="id" :pagination="false" size="small" />
+          <a-table :columns="shipmentColumns" :data-source="order.shipments" row-key="id" :pagination="false" size="small">
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'action'">
+                <a-button type="link" size="small" @click="viewTrack(record)">查看轨迹</a-button>
+              </template>
+            </template>
+          </a-table>
         </a-card>
       </template>
     </a-spin>
 
-    <a-modal v-model:open="shipOpen" title="填写物流信息" :confirm-loading="shipLoading" @ok="submitShip">
-      <a-form layout="vertical" style="margin-top:8px">
-        <a-form-item label="物流公司" required>
-          <a-input v-model:value="shipForm.logistics_company" placeholder="如 顺丰速运" />
-        </a-form-item>
-        <a-form-item label="运单号" required>
-          <a-input v-model:value="shipForm.tracking_no" placeholder="请输入运单号" />
-        </a-form-item>
-      </a-form>
+    <!-- 发货 / 修改物流弹窗（多包裹） -->
+    <a-modal
+      v-model:open="shipOpen"
+      :title="order?.status === 1 ? '填写物流信息' : '修改物流信息'"
+      :confirm-loading="shipLoading"
+      width="600px"
+      @ok="submitShip"
+    >
+      <div v-for="(pkg, index) in shipPackages" :key="index" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-weight:500">包裹 {{ index + 1 }}</span>
+          <a-button v-if="shipPackages.length > 1" type="link" danger size="small" @click="removePackage(index)">删除</a-button>
+        </div>
+        <a-form layout="vertical">
+          <a-form-item label="物流公司" required>
+            <a-select
+              v-model:value="pkg.logistics_code"
+              placeholder="请选择物流公司"
+              @change="(code) => onCompanyChange(index, code)"
+            >
+              <a-select-option v-for="c in logisticsCompanies" :key="c.code" :value="c.code">{{ c.name }}</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="运单号" required>
+            <a-input v-model:value="pkg.tracking_no" placeholder="请输入运单号" />
+          </a-form-item>
+        </a-form>
+        <a-divider v-if="index < shipPackages.length - 1" style="margin:8px 0" />
+      </div>
+      <a-button type="dashed" block @click="addPackage">+ 添加包裹</a-button>
+    </a-modal>
+
+    <!-- 物流轨迹弹窗 -->
+    <a-modal v-model:open="trackOpen" title="物流轨迹" :footer="null" width="520px">
+      <a-spin :spinning="trackLoading">
+        <template v-if="trackData">
+          <a-descriptions :column="1" size="small" style="margin-bottom:16px">
+            <a-descriptions-item label="物流公司">{{ trackData.logistics_company }}</a-descriptions-item>
+            <a-descriptions-item label="运单号">{{ trackData.tracking_no }}</a-descriptions-item>
+            <a-descriptions-item label="状态">{{ trackData.state_text }}</a-descriptions-item>
+          </a-descriptions>
+          <a-timeline v-if="trackData.tracks?.length">
+            <a-timeline-item v-for="(item, i) in trackData.tracks" :key="i">
+              <div>{{ item.context }}</div>
+              <div style="color:#999;font-size:12px">{{ item.time }}</div>
+            </a-timeline-item>
+          </a-timeline>
+          <a-empty v-else description="暂无轨迹信息" />
+        </template>
+      </a-spin>
     </a-modal>
   </div>
 </template>
