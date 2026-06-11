@@ -11,11 +11,10 @@ const total = ref(0)
 const pagination = reactive({ current: 1, pageSize: 20 })
 
 const columns = [
-  { title: 'ID', dataIndex: 'id', width: 80 },
   { title: '周期名称', dataIndex: 'period_name' },
   { title: '开始日期', dataIndex: 'start_date', width: 120 },
   { title: '结束日期', dataIndex: 'end_date', width: 120 },
-  { title: '销售额', dataIndex: 'sales_amount', width: 120 },
+  { title: '销售额', dataIndex: 'total_sales', width: 120 },
   { title: '分红池', dataIndex: 'pool_amount', width: 120 },
   { title: '生成时间', dataIndex: 'created_at', width: 160 },
   { title: '操作', key: 'action', width: 120 },

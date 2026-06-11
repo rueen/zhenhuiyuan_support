@@ -1,3 +1,11 @@
+<!--
+ * @Author: diaochan diaochan@seatent.com
+ * @Date: 2026-05-29 21:04:39
+ * @LastEditors: diaochan diaochan@seatent.com
+ * @LastEditTime: 2026-06-11 20:49:19
+ * @FilePath: /zhenhuiyuan_support/src/views/dividend/DividendDetailView.vue
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+-->
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -11,7 +19,7 @@ const data = ref(null)
 
 const memberColumns = [
   { title: '会员ID', dataIndex: 'member_id', width: 90 },
-  { title: '昵称', dataIndex: 'nickname' },
+  { title: '昵称', dataIndex: 'member_nickname' },
   { title: '等级', dataIndex: 'level_name', width: 100 },
   { title: '周期贡献值', dataIndex: 'member_contribution', width: 120 },
   { title: '应分金额', dataIndex: 'share_amount', width: 120 },
