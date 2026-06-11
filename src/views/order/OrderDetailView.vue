@@ -2,7 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { getOrder, shipOrder, cancelOrder, getLogisticsCompanies, getShipmentTrack } from '@/api/order'
+import { getOrder, shipOrder, cancelOrder, getLogisticsCompanies, getShipmentTrack, updateOrderReceiver } from '@/api/order'
+import { buildRegionOptions } from '@/utils/regions'
 
 const route = useRoute()
 const router = useRouter()
@@ -104,6 +105,73 @@ function handleCancel() {
   Modal.confirm({ title: '确定取消该订单？', onOk: async () => { await cancelOrder(id); message.success('已取消'); fetchOrder() } })
 }
 
+// 修改收货信息
+const receiverOpen = ref(false)
+const receiverLoading = ref(false)
+const regionOptions = buildRegionOptions()
+const receiverForm = ref({
+  receiver_name: '',
+  phone: '',
+  region: [],
+  province_code: '',
+  province_name: '',
+  city_code: '',
+  city_name: '',
+  district_code: '',
+  district_name: '',
+  detail: '',
+})
+
+/**
+ * 级联选择变化时，将选中的 code/name 同步到 form 字段
+ * @param {string[]} codes - [province_code, city_code, district_code]
+ * @param {object[]} selectedOptions - 对应的选项对象数组
+ */
+function onRegionChange(codes, selectedOptions) {
+  receiverForm.value.province_code = codes[0] ?? ''
+  receiverForm.value.province_name = selectedOptions[0]?.label ?? ''
+  receiverForm.value.city_code = codes[1] ?? ''
+  receiverForm.value.city_name = selectedOptions[1]?.label ?? ''
+  receiverForm.value.district_code = codes[2] ?? ''
+  receiverForm.value.district_name = selectedOptions[2]?.label ?? ''
+}
+
+/** 打开修改收货信息弹窗，回填当前快照 */
+function openReceiverModal() {
+  const s = order.value?.receiver_snapshot ?? {}
+  const region = [s.province_code, s.city_code, s.district_code].filter(Boolean)
+  receiverForm.value = {
+    receiver_name: s.receiver_name ?? '',
+    phone: s.phone ?? '',
+    region,
+    province_code: s.province_code ?? '',
+    province_name: s.province_name ?? '',
+    city_code: s.city_code ?? '',
+    city_name: s.city_name ?? '',
+    district_code: s.district_code ?? '',
+    district_name: s.district_name ?? '',
+    detail: s.detail ?? '',
+  }
+  receiverOpen.value = true
+}
+
+async function submitReceiver() {
+  const f = receiverForm.value
+  if (!f.receiver_name || !f.phone || !f.detail) {
+    return message.warning('收货人、手机号、详细地址为必填项')
+  }
+  receiverLoading.value = true
+  try {
+    const { region: _, ...payload } = f
+    await updateOrderReceiver(id, payload)
+    message.success('收货信息已更新')
+    receiverOpen.value = false
+    fetchOrder()
+  } finally {
+    receiverLoading.value = false
+  }
+}
+
 // 物流轨迹
 const trackOpen = ref(false)
 const trackLoading = ref(false)
@@ -150,10 +218,27 @@ async function viewTrack(shipment) {
           <a-descriptions-item label="支付时间">{{ order.paid_at || '—' }}</a-descriptions-item>
         </a-descriptions>
 
-        <a-descriptions title="收货信息" :column="2" style="margin-bottom:24px" v-if="order.receiver_snapshot">
+        <a-descriptions :column="1" style="margin-bottom:24px" v-if="order.receiver_snapshot">
+          <template #title>
+            <span>收货信息</span>
+            <a-button
+              v-if="[0, 1, 2].includes(order.status)"
+              type="link"
+              size="small"
+              style="margin-left:8px;padding:0"
+              @click="openReceiverModal"
+            >修改</a-button>
+          </template>
           <a-descriptions-item label="收货人">{{ order.receiver_snapshot.receiver_name }}</a-descriptions-item>
           <a-descriptions-item label="手机">{{ order.receiver_snapshot.phone }}</a-descriptions-item>
-          <a-descriptions-item label="地址" :span="2">{{ order.receiver_snapshot.detail }}</a-descriptions-item>
+          <a-descriptions-item label="地址" :span="2">
+            <a-space>
+              <span>{{ order.receiver_snapshot.province_name }}</span>
+              <span>{{ order.receiver_snapshot.city_name }}</span>
+              <span>{{ order.receiver_snapshot.district_name }}</span>
+              <span>{{ order.receiver_snapshot.detail }}</span>
+            </a-space>
+          </a-descriptions-item>
         </a-descriptions>
 
         <a-card title="商品明细" :bordered="false" size="small" style="margin-bottom:16px">
@@ -202,6 +287,43 @@ async function viewTrack(shipment) {
         <a-divider v-if="index < shipPackages.length - 1" style="margin:8px 0" />
       </div>
       <a-button type="dashed" block @click="addPackage">+ 添加包裹</a-button>
+    </a-modal>
+
+    <!-- 修改收货信息弹窗 -->
+    <a-modal
+      v-model:open="receiverOpen"
+      title="修改收货信息"
+      :confirm-loading="receiverLoading"
+      width="520px"
+      @ok="submitReceiver"
+    >
+      <a-form layout="vertical" style="margin-top:8px">
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="收货人" required>
+              <a-input v-model:value="receiverForm.receiver_name" placeholder="请输入收货人姓名" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="手机号" required>
+              <a-input v-model:value="receiverForm.phone" placeholder="请输入手机号" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <a-form-item label="省 / 市 / 区县">
+          <a-cascader
+            v-model:value="receiverForm.region"
+            :options="regionOptions"
+            placeholder="请选择省市区"
+            style="width:100%"
+            show-search
+            @change="onRegionChange"
+          />
+        </a-form-item>
+        <a-form-item label="详细地址" required>
+          <a-input v-model:value="receiverForm.detail" placeholder="请输入详细地址" />
+        </a-form-item>
+      </a-form>
     </a-modal>
 
     <!-- 物流轨迹弹窗 -->
