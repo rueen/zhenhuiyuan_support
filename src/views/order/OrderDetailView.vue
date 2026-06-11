@@ -20,7 +20,7 @@ const STATUS_MAP = {
 }
 
 const itemColumns = [
-  { title: '商品名称', dataIndex: 'product_name' },
+  { title: '商品名称', dataIndex: 'product_name', key: 'product_name' },
   { title: '单价', dataIndex: 'price' },
   { title: '数量', dataIndex: 'quantity' },
   { title: '小计', dataIndex: 'subtotal' },
@@ -203,7 +203,7 @@ async function viewTrack(shipment) {
   <div>
     <!-- 顶部操作栏 -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <a-button @click="router.push('/orders')">← 返回</a-button>
+      <a-button @click="router.back()">← 返回</a-button>
       <a-space v-if="order">
         <a-button v-if="order.status === 1" type="primary" @click="openShipModal">发货</a-button>
         <a-button v-if="[0, 1].includes(order.status)" danger @click="handleCancel">取消订单</a-button>
@@ -216,7 +216,14 @@ async function viewTrack(shipment) {
           <a-descriptions-item label="状态">
             <a-tag :color="STATUS_MAP[order.status]?.[1]">{{ STATUS_MAP[order.status]?.[0] }}</a-tag>
           </a-descriptions-item>
-          <a-descriptions-item label="会员ID">{{ order.member_id }}</a-descriptions-item>
+          <a-descriptions-item label="下单会员">
+            <a-button
+              type="link"
+              size="small"
+              style="padding:0"
+              @click="router.push(`/members/${order.member_id}`)"
+            >{{ order.member_nickname || order.member_id }}</a-button>
+          </a-descriptions-item>
           <a-descriptions-item label="商品金额">{{ order.product_amount }}</a-descriptions-item>
           <a-descriptions-item label="运费">{{ order.shipping_fee }}</a-descriptions-item>
           <a-descriptions-item label="实付">{{ order.pay_amount }}</a-descriptions-item>
@@ -248,7 +255,18 @@ async function viewTrack(shipment) {
         </a-descriptions>
 
         <a-card title="商品明细" :bordered="false" size="small" style="margin-bottom:16px">
-          <a-table :columns="itemColumns" :data-source="order.items" row-key="id" :pagination="false" size="small" />
+          <a-table :columns="itemColumns" :data-source="order.items" row-key="id" :pagination="false" size="small">
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'product_name'">
+                <a-button
+                  type="link"
+                  size="small"
+                  style="padding:0"
+                  @click="router.push(`/products/${record.product_id}/edit`)"
+                >{{ record.product_name }}</a-button>
+              </template>
+            </template>
+          </a-table>
         </a-card>
 
         <a-card :bordered="false" size="small" style="margin-bottom:16px">

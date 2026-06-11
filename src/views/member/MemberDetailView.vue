@@ -40,7 +40,7 @@ const balanceLoading = ref(false)
 const contribColumns = [
   { title: '变动值', dataIndex: 'change_amount' },
   { title: '当前总贡献值', dataIndex: 'balance_after' },
-  { title: '来源订单', dataIndex: 'related_order_no' },
+  { title: '来源订单', dataIndex: 'related_order_no', key: 'related_order' },
   { title: '类型', dataIndex: 'type' },
   { title: '说明', dataIndex: 'remark' },
   { title: '时间', dataIndex: 'created_at', width: 160 },
@@ -323,7 +323,20 @@ watch(hasDevice, (val) => {
           :pagination="{ current: contribPage, total: contribTotal, pageSize: 20, showTotal: t => `共 ${t} 条` }"
           row-key="id"
           @change="(p) => fetchContribs(p.current)"
-        />
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'related_order'">
+              <a-button
+                v-if="record.related_order_id"
+                type="link"
+                size="small"
+                style="padding:0"
+                @click="router.push(`/orders/${record.related_order_id}`)"
+              >{{ record.related_order_no }}</a-button>
+              <span v-else>—</span>
+            </template>
+          </template>
+        </a-table>
       </a-tab-pane>
       <a-tab-pane key="balance" tab="余额流水">
         <a-table
