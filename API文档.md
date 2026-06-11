@@ -470,12 +470,21 @@ query 参数：
 | GET | /orders | order:list | 列表（`keyword?/status?/memberId?` + 分页） |
 | GET | /orders/logistics-companies | — | 物流公司预置列表（发货下拉用） |
 | GET | /orders/:id | order:detail | 详情 |
-| POST | /orders/:id/ship | order:ship | 发货（`logistics_company`、`logistics_code`、`tracking_no`，支持多包裹） |
+| PUT | /orders/:id/shipments | order:ship | 发货/改物流（传完整 `shipments` 数组，智能 diff：带 id 改、无 id 增、缺失删） |
 | POST | /orders/:id/cancel | order:cancel | 取消（完成前，回补库存） |
 | PUT | /orders/:id/receiver | order:edit | 修改收货信息 |
 | GET | /orders/:id/shipments/:shipmentId/track | order:detail | 查询物流轨迹 |
 
-> 发货：首次发货 `待发货 → 待收货`；可多次录入物流包裹。`logistics_code` 必须取自 `/orders/logistics-companies` 返回的 `code` 字段，否则校验失败。
+> 发货/改物流：单接口整单覆盖，仅允许 `待发货 / 待收货` 状态（已完成/已取消返回 400）。请求体传该订单**完整**包裹数组，后端按 id diff：元素带 `id` 更新该包裹（`id`/`created_at` 保留），无 `id` 新增，库中存在但本次未提交的 id 删除。包裹数 `>0` 且原为待发货则置 `待收货` 并写首发时间（改货不覆盖）；传空数组 `[]` 清空全部包裹并退回 `待发货`。`logistics_code` 必须取自 `/orders/logistics-companies` 返回的 `code` 字段，否则校验失败。
+>
+> ```json
+> {
+>   "shipments": [
+>     { "id": 5, "logistics_company": "顺丰速运", "logistics_code": "shunfeng", "tracking_no": "SF123" },
+>     { "logistics_company": "中通快递", "logistics_code": "zhongtong", "tracking_no": "ZT456" }
+>   ]
+> }
+> ```
 >
 > 物流轨迹：响应 `data` 同 C 端 `GET /orders/:id/shipments/:shipmentId/track`；管理端无归属校验。轨迹数据来自快递100 API，同单号默认 1 小时内存缓存。
 >

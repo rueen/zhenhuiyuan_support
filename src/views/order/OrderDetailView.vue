@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { getOrder, shipOrder, cancelOrder, getLogisticsCompanies, getShipmentTrack, updateOrderReceiver } from '@/api/order'
+import { getOrder, updateShipments, cancelOrder, getLogisticsCompanies, getShipmentTrack, updateOrderReceiver } from '@/api/order'
 import { buildRegionOptions } from '@/utils/regions'
 
 const route = useRoute()
@@ -54,10 +54,11 @@ const shipLoading = ref(false)
 function openShipModal() {
   const shipments = order.value?.shipments
   if (order.value?.status === 2 && shipments?.length) {
-    // 修改物流：回填已有包裹信息，logistics_code 通过名称反查
+    // 修改物流：回填已有包裹信息，保留 id 供后端 diff，logistics_code 通过名称反查
     shipPackages.value = shipments.map(s => {
       const matched = logisticsCompanies.value.find(c => c.name === s.logistics_company)
       return {
+        id: s.id,
         logistics_company: s.logistics_company,
         logistics_code: matched?.code ?? '',
         tracking_no: s.tracking_no,
@@ -91,10 +92,17 @@ async function submitShip() {
   }
   shipLoading.value = true
   try {
-    for (const pkg of shipPackages.value) {
-      await shipOrder(id, pkg)
-    }
-    message.success('发货成功')
+    const shipments = shipPackages.value.map(pkg => {
+      const item = {
+        logistics_company: pkg.logistics_company,
+        logistics_code: pkg.logistics_code,
+        tracking_no: pkg.tracking_no,
+      }
+      if (pkg.id) item.id = pkg.id
+      return item
+    })
+    await updateShipments(id, shipments)
+    message.success(order.value?.status === 1 ? '发货成功' : '物流信息已更新')
     shipOpen.value = false
     fetchOrder()
   } finally { shipLoading.value = false }
@@ -197,9 +205,7 @@ async function viewTrack(shipment) {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <a-button @click="router.push('/orders')">← 返回</a-button>
       <a-space v-if="order">
-        <a-button v-if="[1, 2].includes(order.status)" type="primary" @click="openShipModal">
-          {{ order.status === 1 ? '发货' : '修改物流' }}
-        </a-button>
+        <a-button v-if="order.status === 1" type="primary" @click="openShipModal">发货</a-button>
         <a-button v-if="[0, 1].includes(order.status)" danger @click="handleCancel">取消订单</a-button>
       </a-space>
     </div>
@@ -245,7 +251,17 @@ async function viewTrack(shipment) {
           <a-table :columns="itemColumns" :data-source="order.items" row-key="id" :pagination="false" size="small" />
         </a-card>
 
-        <a-card title="物流包裹" :bordered="false" size="small" style="margin-bottom:16px">
+        <a-card :bordered="false" size="small" style="margin-bottom:16px">
+          <template #title>
+            <span>物流包裹</span>
+            <a-button
+              v-if="order.status === 2"
+              type="link"
+              size="small"
+              style="margin-left:8px;padding:0"
+              @click="openShipModal"
+            >修改</a-button>
+          </template>
           <a-table :columns="shipmentColumns" :data-source="order.shipments" row-key="id" :pagination="false" size="small">
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'action'">
@@ -268,7 +284,7 @@ async function viewTrack(shipment) {
       <div v-for="(pkg, index) in shipPackages" :key="index" style="margin-bottom:16px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <span style="font-weight:500">包裹 {{ index + 1 }}</span>
-          <a-button v-if="shipPackages.length > 1" type="link" danger size="small" @click="removePackage(index)">删除</a-button>
+          <a-button type="link" danger size="small" @click="removePackage(index)">删除</a-button>
         </div>
         <a-form layout="vertical">
           <a-form-item label="物流公司" required>
