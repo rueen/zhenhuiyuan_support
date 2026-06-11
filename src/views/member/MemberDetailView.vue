@@ -2,6 +2,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
+import CopyButton from '@/components/CopyButton.vue'
 import {
   getMember,
   getMembers,
@@ -41,7 +42,7 @@ const contribColumns = [
   { title: '变动值', dataIndex: 'change_amount' },
   { title: '当前总贡献值', dataIndex: 'balance_after' },
   { title: '来源订单', dataIndex: 'related_order_no', key: 'related_order' },
-  { title: '类型', dataIndex: 'type' },
+  { title: '类型', dataIndex: 'type_text' },
   { title: '说明', dataIndex: 'remark' },
   { title: '时间', dataIndex: 'created_at', width: 160 },
 ]
@@ -295,7 +296,12 @@ watch(hasDevice, (val) => {
           <a-descriptions-item label="等级">{{ info.level_name }}</a-descriptions-item>
           <a-descriptions-item label="累计贡献值">{{ info.cumulative_contribution }}</a-descriptions-item>
           <a-descriptions-item label="可提现余额">{{ info.withdrawable_balance }}</a-descriptions-item>
-          <a-descriptions-item label="邀请码">{{ info.invite_code }}</a-descriptions-item>
+          <a-descriptions-item label="邀请码">
+            <a-space>
+              <span>{{ info.invite_code }}</span>
+              <CopyButton :text="info.invite_code" />
+            </a-space>
+          </a-descriptions-item>
           <a-descriptions-item label="上级ID">{{ info.parent_id || '—' }}</a-descriptions-item>
           <a-descriptions-item label="首次消费时间">{{ info.first_consumed_at || '未消费' }}</a-descriptions-item>
           <a-descriptions-item label="注册时间">{{ info.created_at }}</a-descriptions-item>

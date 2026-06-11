@@ -1,9 +1,11 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import { getWithdrawals, getWithdrawal, reviewWithdrawal, payWithdrawal } from '@/api/withdrawal'
 import { useOssUpload } from '@/composables/useOssUpload'
 
+const router = useRouter()
 const loading = ref(false)
 const dataSource = ref([])
 const total = ref(0)
@@ -18,18 +20,15 @@ const STATUS_MAP = {
 }
 
 const columns = [
-  { title: 'ID', dataIndex: 'id', width: 80 },
-  { title: '会员ID', dataIndex: 'member_id', width: 90 },
+  { title: '会员昵称', key: 'member_nickname', width: 120 },
   { title: '提现金额', dataIndex: 'amount', width: 110 },
   { title: '账户类型', key: 'account_type', width: 100 },
-  { title: '账号（脱敏）', dataIndex: 'account_no_masked', width: 140 },
-  { title: '真实姓名', dataIndex: 'real_name', width: 100 },
+  { title: '账号（脱敏）', key: 'account_no', width: 160 },
+  { title: '真实姓名', key: 'real_name', width: 100 },
   { title: '状态', dataIndex: 'status', width: 100 },
   { title: '申请时间', dataIndex: 'created_at', width: 160 },
   { title: '操作', key: 'action', width: 160, fixed: 'right' },
 ]
-
-const ACCOUNT_TYPE_MAP = { 1: '银行卡', 2: '支付宝', 3: '微信' }
 
 async function fetchList() {
   loading.value = true
@@ -148,7 +147,14 @@ async function submitPay() {
       @change="onTableChange"
     >
       <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'account_type'">{{ ACCOUNT_TYPE_MAP[record.account_type] || '—' }}</template>
+        <template v-if="column.key === 'member_nickname'">
+          <a-button type="link" size="small" style="padding:0" @click="router.push(`/members/${record.member_id}`)">
+            {{ record.member_nickname || record.member_id }}
+          </a-button>
+        </template>
+        <template v-else-if="column.key === 'account_type'">{{ record.account_snapshot.account_type_text || '—' }}</template>
+        <template v-else-if="column.key === 'account_no'">{{ record.account_snapshot?.account_no_mask || '—' }}</template>
+        <template v-else-if="column.key === 'real_name'">{{ record.account_snapshot?.real_name || '—' }}</template>
         <template v-else-if="column.dataIndex === 'status'">
           <a-tag :color="STATUS_MAP[record.status]?.[1]">{{ STATUS_MAP[record.status]?.[0] }}</a-tag>
         </template>
@@ -168,11 +174,11 @@ async function submitPay() {
         <template v-if="detail">
           <a-descriptions :column="1" bordered size="small">
             <a-descriptions-item label="ID">{{ detail.id }}</a-descriptions-item>
-            <a-descriptions-item label="会员ID">{{ detail.member_id }}</a-descriptions-item>
-            <a-descriptions-item label="真实姓名">{{ detail.real_name }}</a-descriptions-item>
-            <a-descriptions-item label="账户类型">{{ ACCOUNT_TYPE_MAP[detail.account_type] }}</a-descriptions-item>
-            <a-descriptions-item label="账号（脱敏）">{{ detail.account_no_masked }}</a-descriptions-item>
-            <a-descriptions-item label="银行名称">{{ detail.bank_name || '—' }}</a-descriptions-item>
+            <a-descriptions-item label="会员昵称">{{ detail.member_nickname || detail.member_id }}</a-descriptions-item>
+            <a-descriptions-item label="真实姓名">{{ detail.account_snapshot?.real_name || '—' }}</a-descriptions-item>
+            <a-descriptions-item label="账户类型">{{ detail.account_snapshot.account_type_text }}</a-descriptions-item>
+            <a-descriptions-item label="账号（脱敏）">{{ detail.account_snapshot?.account_no_mask || '—' }}</a-descriptions-item>
+            <a-descriptions-item label="银行名称">{{ detail.account_snapshot?.bank_name || '—' }}</a-descriptions-item>
             <a-descriptions-item label="提现金额">{{ detail.amount }}</a-descriptions-item>
             <a-descriptions-item label="状态">
               <a-tag :color="STATUS_MAP[detail.status]?.[1]">{{ STATUS_MAP[detail.status]?.[0] }}</a-tag>
