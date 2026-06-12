@@ -101,7 +101,7 @@ async function submit() {
 
 <template>
   <div>
-    <a-page-header :title="isEdit ? '编辑商品' : '新增商品'" @back="router.push('/products')" style="padding:0 0 16px" />
+    <a-page-header :title="isEdit ? '编辑商品' : '新增商品'" @back="router.back()" style="padding:0 0 16px" />
     <a-spin :spinning="pageLoading">
       <a-form layout="vertical">
         <a-form-item label="商品名称" required>

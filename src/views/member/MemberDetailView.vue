@@ -337,7 +337,6 @@ watch(hasDevice, (val) => {
     <a-skeleton :loading="infoLoading" active>
       <template v-if="info">
         <a-descriptions title="基本信息" bordered :column="2" style="margin-bottom:24px">
-          <a-descriptions-item label="ID">{{ info.id }}</a-descriptions-item>
           <a-descriptions-item label="昵称">{{ info.nickname }}</a-descriptions-item>
           <a-descriptions-item label="手机号">{{ info.phone }}</a-descriptions-item>
           <a-descriptions-item label="等级">
@@ -352,7 +351,16 @@ watch(hasDevice, (val) => {
               <CopyButton :text="info.invite_code" />
             </a-space>
           </a-descriptions-item>
-          <a-descriptions-item label="上级ID">{{ info.parent_id || '—' }}</a-descriptions-item>
+          <a-descriptions-item label="上级">
+            <a-button
+              v-if="info.parent_id"
+              type="link"
+              size="small"
+              style="padding:0"
+              @click="router.push(`/members/${info.parent_id}`)"
+            >{{ info.parent.nickname }}</a-button>
+            <span v-else>—</span>
+          </a-descriptions-item>
           <a-descriptions-item label="首次消费时间">{{ info.first_consumed_at || '未消费' }}</a-descriptions-item>
           <a-descriptions-item label="注册时间">{{ info.created_at }}</a-descriptions-item>
           <a-descriptions-item label="状态">

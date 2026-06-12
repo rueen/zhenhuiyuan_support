@@ -9,11 +9,11 @@ const loading = ref(false)
 const dataSource = ref([])
 const total = ref(0)
 const pagination = reactive({ current: 1, pageSize: 20 })
-const filters = reactive({ keyword: '', categoryId: undefined, status: undefined })
+const filters = reactive({ keyword: '', product_no: '', categoryId: undefined, status: undefined })
 const categoryOptions = ref([])
 
 const columns = [
-  { title: 'ID', dataIndex: 'id', width: 70 },
+  { title: '商品编号', dataIndex: 'product_no' },
   { title: '封面', key: 'cover', width: 80 },
   { title: '商品名称', dataIndex: 'name' },
   { title: '分类', dataIndex: 'category_name' },
@@ -33,6 +33,7 @@ async function fetchList() {
       page: pagination.current,
       pageSize: pagination.pageSize,
       keyword: filters.keyword || undefined,
+      productNo: filters.product_no || undefined,
       categoryId: filters.categoryId,
       status: filters.status,
     })
@@ -55,7 +56,13 @@ function onTableChange(pag) {
 }
 
 function search() { pagination.current = 1; fetchList() }
-function reset() { filters.keyword = ''; filters.categoryId = undefined; filters.status = undefined; search() }
+function reset() {
+  filters.keyword = ''
+  filters.product_no = ''
+  filters.categoryId = undefined
+  filters.status = undefined
+  search()
+}
 
 function handleDelete(id) {
   Modal.confirm({
@@ -70,6 +77,7 @@ function handleDelete(id) {
     <div class="action-bar">
       <div class="filter-bar" style="margin-bottom:0">
         <a-input v-model:value="filters.keyword" placeholder="商品名称" style="width:200px" allow-clear />
+        <a-input v-model:value="filters.product_no" placeholder="商品编号" style="width:160px" allow-clear />
         <a-select v-model:value="filters.categoryId" placeholder="分类" style="width:130px" allow-clear>
           <a-select-option v-for="c in categoryOptions" :key="c.id" :value="c.id">{{ c.name }}</a-select-option>
         </a-select>
