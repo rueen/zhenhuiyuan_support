@@ -9,3 +9,5 @@ export const updateMemberParent = (id, data) => request.put(`/members/${id}/pare
 export const updateMemberLevel = (id, data) => request.put(`/members/${id}/level`, data)
 export const updateMemberDevice = (id, data) => request.put(`/members/${id}/device`, data)
 export const getMemberHealthRecords = (id) => request.get(`/members/${id}/health-records`)
+export const adjustMemberContribution = (id, data) => request.post(`/members/${id}/adjust-contribution`, data)
+export const adjustMemberBalance = (id, data) => request.post(`/members/${id}/adjust-balance`, data)

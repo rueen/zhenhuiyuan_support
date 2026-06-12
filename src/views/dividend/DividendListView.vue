@@ -104,7 +104,7 @@ async function submitCreate() {
             :disabled-date="d => createForm.start_date && d.isBefore(createForm.start_date, 'day')"
           />
         </a-form-item>
-        <a-alert message="生成逻辑：统计区间内已完成订单销售额，按等级分红池比例计算各会员应分金额，仅统计不入账" type="info" show-icon />
+        <a-alert message="生成逻辑：统计区间内已付款（待发货/已发货）订单销售额，按等级分红池比例计算各会员应分金额，仅统计不入账" type="info" show-icon />
       </a-form>
     </a-modal>
   </div>

@@ -21,9 +21,9 @@ const filters = reactive({ keyword: '', status: undefined })
 const STATUS_MAP = {
   0: ['待付款', 'default'],
   1: ['待发货', 'processing'],
-  2: ['待收货', 'warning'],
-  3: ['已完成', 'success'],
+  2: ['已发货', 'warning'],
   4: ['已取消', 'error'],
+  5: ['已退款', 'magenta'],
 }
 
 const columns = [

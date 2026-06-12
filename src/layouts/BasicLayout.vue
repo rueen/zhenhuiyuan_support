@@ -35,6 +35,9 @@ const menuConfig = [
     ],
   },
   { key: '/shipping', title: '运费模板', icon: CarOutlined, perm: 'shipping' },
+  { key: '/orders', title: '订单管理', icon: FileTextOutlined, perm: 'order' },
+  { key: '/withdrawals', title: '提现管理', icon: WalletOutlined, perm: 'withdrawal' },
+  { key: '/dividends', title: '业绩分红', icon: BarChartOutlined, perm: 'dividend' },
   {
     key: 'content', title: '内容管理', icon: ReadOutlined,
     children: [
@@ -48,9 +51,6 @@ const menuConfig = [
       { key: '/marketing/ads', title: '广告', perm: 'ad' },
     ],
   },
-  { key: '/orders', title: '订单管理', icon: FileTextOutlined, perm: 'order' },
-  { key: '/withdrawals', title: '提现管理', icon: WalletOutlined, perm: 'withdrawal' },
-  { key: '/dividends', title: '业绩分红', icon: BarChartOutlined, perm: 'dividend' },
   {
     key: 'system', title: '系统管理', icon: SettingOutlined,
     children: [

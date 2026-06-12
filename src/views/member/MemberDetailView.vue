@@ -13,11 +13,15 @@ import {
   updateMemberParent,
   updateMemberLevel,
   updateMemberDevice,
+  adjustMemberContribution,
+  adjustMemberBalance,
 } from '@/api/member'
 import { getLevels } from '@/api/level'
+import { useAuthStore } from '@/store/auth'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const id = route.params.id
 
 const info = ref(null)
@@ -48,13 +52,19 @@ const contribColumns = [
 ]
 
 const balanceColumns = [
-  { title: '变动金额', dataIndex: 'amount' },
-  { title: '当前余额', dataIndex: 'current_balance' },
-  { title: '类型', dataIndex: 'type' },
+  { title: '变动金额', dataIndex: 'change_amount' },
+  { title: '当前余额', dataIndex: 'balance_after' },
+  { title: '类型', dataIndex: 'type', key: 'balance_type' },
   { title: '来源', dataIndex: 'source' },
   { title: '说明', dataIndex: 'remark' },
   { title: '时间', dataIndex: 'created_at', width: 160 },
 ]
+
+/** 余额流水类型中文映射（未知类型回退原值） */
+const BALANCE_TYPE_TEXT = {
+  refund_clawback: '退款回退',
+  admin_adjust: '手动调整',
+}
 
 const patientColumns = [
   { title: '就诊人', dataIndex: 'patname' },
@@ -194,11 +204,46 @@ async function submitLevel() {
   levelLoading.value = true
   try {
     await updateMemberLevel(id, { level_id: levelForm.levelId })
-    message.success('调整成功（已锁定等级）')
+    message.success('调整成功（已设为等级地板）')
     levelOpen.value = false
     fetchInfo()
   } finally {
     levelLoading.value = false
+  }
+}
+
+// ---- 调整贡献值 / 余额 ----
+const adjustOpen = ref(false)
+const adjustType = ref('contribution') // 'contribution' | 'balance'
+const adjustForm = reactive({ amount: null, remark: '' })
+const adjustLoading = ref(false)
+
+const adjustTitle = computed(() =>
+  adjustType.value === 'contribution' ? '调整贡献值' : '调整可提现余额',
+)
+
+function openAdjust(type) {
+  adjustType.value = type
+  adjustForm.amount = null
+  adjustForm.remark = ''
+  adjustOpen.value = true
+}
+
+async function submitAdjust() {
+  const amount = Number(adjustForm.amount)
+  if (!amount || Number.isNaN(amount)) return message.warning('请输入非 0 的调整金额')
+  if (!adjustForm.remark.trim()) return message.warning('请填写备注')
+  adjustLoading.value = true
+  try {
+    const payload = { amount, remark: adjustForm.remark.trim() }
+    if (adjustType.value === 'contribution') await adjustMemberContribution(id, payload)
+    else await adjustMemberBalance(id, payload)
+    message.success('调整成功')
+    adjustOpen.value = false
+    fetchInfo()
+    adjustType.value === 'contribution' ? fetchContribs(contribPage.value) : fetchBalances(balancePage.value)
+  } finally {
+    adjustLoading.value = false
   }
 }
 
@@ -283,6 +328,8 @@ watch(hasDevice, (val) => {
         <a-button @click="openEdit">编辑</a-button>
         <a-button @click="openParent">变更上级</a-button>
         <a-button @click="openLevel">调整等级</a-button>
+        <a-button v-if="auth.hasPermission('member:adjust')" @click="openAdjust('contribution')">调整贡献值</a-button>
+        <a-button v-if="auth.hasPermission('member:adjust')" @click="openAdjust('balance')">调整余额</a-button>
         <a-button @click="openDevice">AI体检</a-button>
       </a-space>
     </div>
@@ -293,7 +340,10 @@ watch(hasDevice, (val) => {
           <a-descriptions-item label="ID">{{ info.id }}</a-descriptions-item>
           <a-descriptions-item label="昵称">{{ info.nickname }}</a-descriptions-item>
           <a-descriptions-item label="手机号">{{ info.phone }}</a-descriptions-item>
-          <a-descriptions-item label="等级">{{ info.level_name }}</a-descriptions-item>
+          <a-descriptions-item label="等级">
+            {{ info.level_name }}
+            <a-tag v-if="info.level_floor_id" color="orange" style="margin-left:8px">已设等级地板</a-tag>
+          </a-descriptions-item>
           <a-descriptions-item label="累计贡献值">{{ info.cumulative_contribution }}</a-descriptions-item>
           <a-descriptions-item label="可提现余额">{{ info.withdrawable_balance }}</a-descriptions-item>
           <a-descriptions-item label="邀请码">
@@ -352,7 +402,13 @@ watch(hasDevice, (val) => {
           :pagination="{ current: balancePage, total: balanceTotal, pageSize: 20, showTotal: t => `共 ${t} 条` }"
           row-key="id"
           @change="(p) => fetchBalances(p.current)"
-        />
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'balance_type'">
+              {{ BALANCE_TYPE_TEXT[record.type] || record.type }}
+            </template>
+          </template>
+        </a-table>
       </a-tab-pane>
       <!-- 仅开通 AI 体检后显示 -->
       <a-tab-pane v-if="hasDevice" key="patient" tab="体检记录">
@@ -415,14 +471,42 @@ watch(hasDevice, (val) => {
     </a-modal>
 
     <!-- 调整等级 -->
-    <a-modal v-model:open="levelOpen" title="调整等级（手动锁定）" :confirm-loading="levelLoading" @ok="submitLevel">
+    <a-modal v-model:open="levelOpen" title="调整等级（设为等级地板）" :confirm-loading="levelLoading" @ok="submitLevel">
       <a-form layout="vertical" style="margin-top:8px">
         <a-form-item label="目标等级">
           <a-select v-model:value="levelForm.levelId" style="width:100%">
             <a-select-option v-for="lv in levelOptions" :key="lv.id" :value="lv.id">{{ lv.name }}</a-select-option>
           </a-select>
         </a-form-item>
-        <a-alert message="手动调整后等级将被锁定，系统不再自动升/降级" type="warning" show-icon style="margin-top:8px" />
+        <a-alert message="手动调整后该等级成为「地板」：系统仍会自动升级，自动降级时不会跌破此等级" type="warning" show-icon style="margin-top:8px" />
+      </a-form>
+    </a-modal>
+
+    <!-- 调整贡献值 / 余额 -->
+    <a-modal v-model:open="adjustOpen" :title="adjustTitle" :confirm-loading="adjustLoading" @ok="submitAdjust">
+      <a-form layout="vertical" style="margin-top:8px">
+        <a-form-item label="调整金额（正数增加，负数减少，不能为 0）" required>
+          <a-input-number
+            v-model:value="adjustForm.amount"
+            style="width:100%"
+            placeholder="请输入调整金额"
+          />
+        </a-form-item>
+        <a-form-item label="备注" required>
+          <a-textarea v-model:value="adjustForm.remark" :rows="3" :maxlength="255" show-count placeholder="请输入备注" />
+        </a-form-item>
+        <a-alert
+          v-if="adjustType === 'balance'"
+          message="余额允许调整为负数（记为欠款，后续新返利将自动抵扣）"
+          type="info"
+          show-icon
+        />
+        <a-alert
+          v-else
+          message="调整贡献值会触发等级自动重算（受等级地板约束）"
+          type="info"
+          show-icon
+        />
       </a-form>
     </a-modal>
 

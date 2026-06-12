@@ -2,11 +2,13 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { getOrder, updateShipments, cancelOrder, getLogisticsCompanies, getShipmentTrack, updateOrderReceiver } from '@/api/order'
+import { getOrder, updateShipments, cancelOrder, refundOrder, getLogisticsCompanies, getShipmentTrack, updateOrderReceiver } from '@/api/order'
 import { buildRegionOptions } from '@/utils/regions'
+import { useAuthStore } from '@/store/auth'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const id = route.params.id
 const loading = ref(false)
 const order = ref(null)
@@ -14,9 +16,9 @@ const order = ref(null)
 const STATUS_MAP = {
   0: ['待付款', 'default'],
   1: ['待发货', 'processing'],
-  2: ['待收货', 'warning'],
-  3: ['已完成', 'success'],
+  2: ['已发货', 'warning'],
   4: ['已取消', 'error'],
+  5: ['已退款', 'magenta'],
 }
 
 const itemColumns = [
@@ -113,6 +115,26 @@ function handleCancel() {
   Modal.confirm({ title: '确定取消该订单？', onOk: async () => { await cancelOrder(id); message.success('已取消'); fetchOrder() } })
 }
 
+// 退款（全额，仅待发货/已发货）
+const refundOpen = ref(false)
+const refundLoading = ref(false)
+const refundReason = ref('')
+
+function openRefundModal() {
+  refundReason.value = ''
+  refundOpen.value = true
+}
+
+async function submitRefund() {
+  refundLoading.value = true
+  try {
+    await refundOrder(id, { reason: refundReason.value.trim() || undefined })
+    message.success('退款成功')
+    refundOpen.value = false
+    fetchOrder()
+  } finally { refundLoading.value = false }
+}
+
 // 修改收货信息
 const receiverOpen = ref(false)
 const receiverLoading = ref(false)
@@ -206,6 +228,11 @@ async function viewTrack(shipment) {
       <a-button @click="router.back()">← 返回</a-button>
       <a-space v-if="order">
         <a-button v-if="order.status === 1" type="primary" @click="openShipModal">发货</a-button>
+        <a-button
+          v-if="[1, 2].includes(order.status) && auth.hasPermission('order:refund')"
+          danger
+          @click="openRefundModal"
+        >退款</a-button>
         <a-button v-if="[0, 1].includes(order.status)" danger @click="handleCancel">取消订单</a-button>
       </a-space>
     </div>
@@ -229,6 +256,19 @@ async function viewTrack(shipment) {
           <a-descriptions-item label="实付">{{ order.pay_amount }}</a-descriptions-item>
           <a-descriptions-item label="下单时间">{{ order.created_at }}</a-descriptions-item>
           <a-descriptions-item label="支付时间">{{ order.paid_at || '—' }}</a-descriptions-item>
+        </a-descriptions>
+
+        <a-descriptions
+          v-if="order.status === 5"
+          title="退款信息"
+          bordered
+          :column="2"
+          style="margin-bottom:24px"
+        >
+          <a-descriptions-item label="退款金额">{{ order.refund_amount }}</a-descriptions-item>
+          <a-descriptions-item label="退款时间">{{ order.refunded_at || '—' }}</a-descriptions-item>
+          <a-descriptions-item label="操作人">{{ order.refund_admin_id || '—' }}</a-descriptions-item>
+          <a-descriptions-item label="退款原因">{{ order.refund_reason || '—' }}</a-descriptions-item>
         </a-descriptions>
 
         <a-descriptions :column="1" style="margin-bottom:24px" v-if="order.receiver_snapshot">
@@ -356,6 +396,33 @@ async function viewTrack(shipment) {
         </a-form-item>
         <a-form-item label="详细地址" required>
           <a-input v-model:value="receiverForm.detail" placeholder="请输入详细地址" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 退款弹窗 -->
+    <a-modal
+      v-model:open="refundOpen"
+      title="订单退款"
+      :confirm-loading="refundLoading"
+      width="480px"
+      @ok="submitRefund"
+    >
+      <a-alert
+        message="将对该订单发起全额退款，已发放的贡献值、余额返利、销量将一并回退，且不可撤销。"
+        type="warning"
+        show-icon
+        style="margin-bottom:16px"
+      />
+      <a-form layout="vertical">
+        <a-form-item label="退款原因（可选）">
+          <a-textarea
+            v-model:value="refundReason"
+            :rows="3"
+            :maxlength="255"
+            show-count
+            placeholder="请输入退款原因"
+          />
         </a-form-item>
       </a-form>
     </a-modal>
