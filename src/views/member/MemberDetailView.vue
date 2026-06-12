@@ -62,8 +62,12 @@ const balanceColumns = [
 
 /** 余额流水类型中文映射（未知类型回退原值） */
 const BALANCE_TYPE_TEXT = {
+  self_rebate: '自购返利',
+  parent_rebate: '父级返利',
+  grandpa_rebate: '祖父级返利',
+  withdraw_deduct: '提现扣减',
   refund_clawback: '退款回退',
-  admin_adjust: '手动调整',
+  admin_adjust: '手动调整'
 }
 
 const patientColumns = [
